@@ -1,15 +1,16 @@
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+from imblearn.over_sampling import SMOTE
+from collections import Counter
 
 # Load the datasets
 datasets = [
     {"X": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\x.npy"), 
      "y": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\y.npy")}
-
 ]
 
 # Loop through each dataset
@@ -20,34 +21,35 @@ for dataset in datasets:
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # List of different k values to test
-    k_values = range(1, 21)
-    accuracy_scores = []
+    # Apply SMOTE to handle class imbalance
+    smote = SMOTE(random_state=42)
+    X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
 
-    # Loop through different k values to calculate accuracy
-    for k in k_values:
-        knn = KNeighborsClassifier(n_neighbors=k)
-        knn.fit(X_train, y_train)
-        accuracy = knn.score(X_test, y_test)
-        accuracy_scores.append(accuracy)
+    # Check the class distribution before and after SMOTE
+    print("Class distribution before SMOTE:", Counter(y_train))
+    print("Class distribution after SMOTE:", Counter(y_train_res))
 
-    # Plot accuracy vs. k
-    plt.figure(figsize=(8, 6))
-    plt.plot(k_values, accuracy_scores, marker='o', linestyle='-', color='b')
-    plt.title('Accuracy vs. Number of Neighbors (k)', fontsize=14)
-    plt.xlabel('Number of Neighbors (k)', fontsize=12)
-    plt.ylabel('Accuracy', fontsize=12)
-    plt.grid(True)
-    plt.show()
+    # List of different k values to test (for GridSearchCV)
+    param_grid = {
+        'n_neighbors': range(1, 21),  # Values for k (number of neighbors)
+        'weights': ['uniform', 'distance'],  # Options for weights (uniform or distance)
+    }
 
-    # Train the model using the best k value (max accuracy)
-    best_k = k_values[np.argmax(accuracy_scores)]
-    print(f"Best k value for this dataset: {best_k}")
+    # Initialize the KNN classifier
+    knn = KNeighborsClassifier()
 
-    # Train with the best k and predict on the test set
-    knn = KNeighborsClassifier(n_neighbors=best_k)
-    knn.fit(X_train, y_train)
-    y_pred = knn.predict(X_test)
+    # Initialize GridSearchCV to tune hyperparameters
+    grid_search = GridSearchCV(estimator=knn, param_grid=param_grid, cv=5, n_jobs=-1, scoring='accuracy')
+
+    # Fit the grid search to the resampled training data
+    grid_search.fit(X_train_res, y_train_res)
+
+    # Print the best parameters from GridSearchCV
+    print(f"Best parameters: {grid_search.best_params_}")
+    best_knn = grid_search.best_estimator_
+
+    # Train the best model and predict on the test set
+    y_pred = best_knn.predict(X_test)
 
     # Confusion Matrix
     conf_matrix = confusion_matrix(y_test, y_pred)
@@ -95,3 +97,7 @@ for dataset in datasets:
 
     plt.tight_layout()
     plt.show()
+
+    # Balanced Accuracy
+    balanced_acc = balanced_accuracy_score(y_test, y_pred)
+    print(f"Balanced Accuracy: {balanced_acc}")
