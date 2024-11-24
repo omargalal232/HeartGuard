@@ -25,7 +25,6 @@ for dataset in datasets:
     smote = SMOTE(random_state=42)
     X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
 
-    # Check the class distribution before and after SMOTE
     print("Class distribution before SMOTE:", Counter(y_train))
     print("Class distribution after SMOTE:", Counter(y_train_res))
 
