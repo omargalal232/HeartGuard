@@ -3,10 +3,15 @@ import librosa
 import numpy as np
 import pandas as pd
 
-# Directory containing the PhysioNet dataset
-data_dir = [r"Data\raw\dataset'\training-a", r"Data\raw\dataset'\training-b", r"Data\raw\dataset'\training-c", r"Data\raw\dataset'\training-d", r"Data\raw\dataset'\training-e", r"Data\raw\dataset'\training-f"]  # Add more directories if needed
+# Directory containing the dataset
+data_dir = [r"Data\raw\dataset'\training-a", 
+            r"Data\raw\dataset'\training-b", 
+            r"Data\raw\dataset'\training-c",
+            r"Data\raw\dataset'\training-d",
+            r"Data\raw\dataset'\training-e",
+            r"Data\raw\dataset'\training-f"]  
 
-label_file = os.path.join(data_dir[0], r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\raw\dataset'\annotations\Online_Appendix_training_set.csv")  # Adjust the path if needed
+label_file = os.path.join(data_dir[0], r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\raw\dataset'\annotations\Online_Appendix_training_set.csv")  
 
 # Read the label file
 labels_df = pd.read_csv(label_file)

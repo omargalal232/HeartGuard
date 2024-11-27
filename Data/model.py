@@ -11,29 +11,29 @@ from imblearn.over_sampling import SMOTE  # Import SMOTE for oversampling
 X = np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\X.npy")
 y = np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\y.npy")
 
-# Step 1: Standardize the features
+# Standardize the features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# Step 2: Apply PCA for noise cancellation
+# Apply PCA for noise cancellation
 pca = PCA(n_components=0.95, random_state=42)
 X_denoised = pca.fit_transform(X_scaled)
 print("Original shape:", X.shape)
 print("Shape after noise cancellation:", X_denoised.shape)
 
-# Step 3: Oversample the dataset using SMOTE
+# Oversample the dataset using SMOTE
 smote = SMOTE(random_state=42)
 X_resampled, y_resampled = smote.fit_resample(X_denoised, y)
 print("Shape after oversampling:", X_resampled.shape)
 
-# Step 4: Split the oversampled data into training and testing sets
+# Split the oversampled data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
 
-# Step 5: Train the SVM with fixed parameters
+# Train the SVM with fixed parameters
 svm = SVC(C=1.0, kernel='rbf', gamma='scale', random_state=42)
 svm.fit(X_train, y_train)
 
-# Step 6: Evaluate the model
+# Evaluate the model
 y_pred = svm.predict(X_test)
 
 print("Confusion Matrix:")
