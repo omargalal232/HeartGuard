@@ -56,3 +56,18 @@ for dataset in datasets:
 
     balanced_acc = balanced_accuracy_score(y_test, y_pred)
     print(f"Balanced Accuracy: {balanced_acc}")
+    
+    
+#===============================================================================================================
+#===============================================================================================================
+
+
+# In model.py (where you train the model)
+import joblib
+
+# Train the model (SVM in your case)
+svm.fit(X_train, y_train)
+
+# Save the trained model to a file
+joblib.dump(svm, 'svm_model.pkl')
+print("Model saved as 'svm_model.pkl'")
