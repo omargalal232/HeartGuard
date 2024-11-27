@@ -8,8 +8,8 @@ import joblib
 from imblearn.over_sampling import SMOTE  # Import SMOTE for oversampling
 
 # Load the datasets
-X = np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\X.npy")
-y = np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\y.npy")
+X = np.load(r"C:\Users\LENOVO\OneDrive\Documents\GitHub\HeartGuard\X.npy")
+y = np.load(r"C:\Users\LENOVO\OneDrive\Documents\GitHub\HeartGuard\y.npy")
 
 # Standardize the features
 scaler = StandardScaler()

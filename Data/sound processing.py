@@ -11,7 +11,7 @@ data_dir = [r"Data\raw\dataset'\training-a",
             r"Data\raw\dataset'\training-e",
             r"Data\raw\dataset'\training-f"]  
 
-label_file = os.path.join(data_dir[0], r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\raw\dataset'\annotations\Online_Appendix_training_set.csv")  
+label_file = os.path.join(data_dir[0], r"C:\Users\LENOVO\OneDrive\Documents\GitHub\HeartGuard\Data\raw\dataset'\annotations\Online_Appendix_training_set.csv")  
 
 # Read the label file
 labels_df = pd.read_csv(label_file)

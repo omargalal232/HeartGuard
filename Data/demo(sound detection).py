@@ -70,7 +70,7 @@ def process_all_audio_files(directory_path):
 # Example usage:
 if __name__ == "__main__":
     # Specify the path to the directory containing the audio files
-    directory_path = r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\raw\demo sounds"
+    directory_path = r"C:\Users\LENOVO\OneDrive\Documents\GitHub\HeartGuard\Data\raw\demo sounds"
 
     # Process all audio files in the directory
     process_all_audio_files(directory_path)
