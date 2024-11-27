@@ -8,21 +8,26 @@ from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
 from imblearn.over_sampling import SMOTE
 
+# Function to preprocess audio and extract MFCC features
 def preprocess_audio(file_path):
+    """
+    This function extracts MFCC features from an audio file for prediction.
+    """
     # Load the MP3 file using librosa
     y, sr = librosa.load(file_path, sr=None)  # sr=None to preserve the original sample rate
     
-    # Extract MFCC features
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30)  # Extract 13 MFCCs
+    # Extract MFCC features (same number of MFCCs as used in training)
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30)  # Use 30 MFCCs as in the training data
     
     # Average the MFCCs across time (axis=1) and flatten it into a 1D array
     features = np.mean(mfcc.T, axis=0)
     
-    # Reshape to 2D array (1 sample, 13 features)
+    # Reshape to 2D array (1 sample, 30 features) as required by the model
     features = features.reshape(1, -1)
     
     return features
 
+# Function to predict if a heart sound is abnormal
 def predict_abnormality(file_path):
     """
     This function uses the pre-trained SVM model to predict whether the heart sound from an MP3 file is abnormal.
@@ -50,7 +55,11 @@ def predict_abnormality(file_path):
     else:
         return "Abnormal"
 
+# Function to process all audio files in a directory
 def process_all_audio_files(directory_path):
+    """
+    This function processes all audio files in the given directory and predicts whether each heart sound is normal or abnormal.
+    """
     # List all files in the directory
     for filename in os.listdir(directory_path):
         # Check if the file is an audio file (e.g., MP3)

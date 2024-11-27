@@ -1,96 +1,55 @@
 import os
 import librosa
-import librosa.display
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# # List of directories containing audio files
-# audio_dirs = ['raw/set_a', 'raw/set_b']  # Add more directories if needed
+# Directory containing the PhysioNet dataset
+data_dir = [r"Data\raw\dataset'\training-a", r"Data\raw\dataset'\training-b", r"Data\raw\dataset'\training-c", r"Data\raw\dataset'\training-d", r"Data\raw\dataset'\training-e", r"Data\raw\dataset'\training-f"]  # Add more directories if needed
 
-# # Output directory to save the generated images
-# output_dir = 'output_images'
-# os.makedirs(output_dir, exist_ok=True)  # Create the output directory if it doesn't exist
+label_file = os.path.join(data_dir[0], r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\raw\dataset'\annotations\Online_Appendix_training_set.csv")  # Adjust the path if needed
 
-# # Loop through each directory in the list
-# for audio_dir in audio_dirs:
-#     print(f"Processing directory: {audio_dir}")
+# Read the label file
+labels_df = pd.read_csv(label_file)
 
-#     # Loop through all files in the current directory
-#     for file_name in os.listdir(audio_dir):
-#         # Process only .wav files
-#         if file_name.endswith('.wav'):
-#             file_path = os.path.join(audio_dir, file_name)
-#             print(f"Processing file: {file_path}")
+# Ensure correct columns are present
+if 'Challenge record name' not in labels_df.columns or 'Class (-1=normal 1=abnormal)' not in labels_df.columns:
+    raise ValueError("Label file must contain 'Challenge record name' and 'Class (-1=normal 1=abnormal)' columns")
 
-#             try:
-#                 # Load the audio file
-#                 y, sr = librosa.load(file_path, sr=None)
-                
-#                 # Plot and save the waveform
-#                 plt.figure(figsize=(10, 4))
-#                 librosa.display.waveshow(y, sr=sr)
-#                 plt.title(f'Waveform: {file_name}')
-#                 waveform_output_path = os.path.join(output_dir, f'{file_name}_waveform.png')
-#                 plt.savefig(waveform_output_path)
-#                 plt.close()
-#                 print(f"Saved waveform plot: {waveform_output_path}")
-                
-#                 # Plot and save the MFCCs
-#                 mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-#                 plt.figure(figsize=(10, 4))
-#                 librosa.display.specshow(mfccs, x_axis='time', sr=sr)
-#                 plt.colorbar()
-#                 plt.title(f'MFCC: {file_name}')
-#                 mfcc_output_path = os.path.join(output_dir, f'{file_name}_mfcc.png')
-#                 plt.savefig(mfcc_output_path)
-#                 plt.close()
-#                 print(f"Saved MFCC plot: {mfcc_output_path}")
+# Rename columns to match the expected names
+labels_df = labels_df.rename(columns={
+    'Challenge record name': 'file_name',
+    'Class (-1=normal 1=abnormal)': 'label'
+})
 
-#             except Exception as e:
-#                 print(f"Error processing {file_path}: {e}")
-
-#=================================================================================================================
-#=================================================================================================================
-
-
-
-
-# List of directories containing audio files
-audio_dirs = ['Data/raw/set_a', 'Data/raw/set_b']  # Add more directories if needed
-
-# Prepare lists to collect data
+# Initialize feature and label lists
 features = []
 labels = []
 
-# Loop through each directory in the list
-for audio_dir in audio_dirs:
-    print(f"Processing directory: {audio_dir}")
+# Process audio files
+for _, row in labels_df.iterrows():
+    file_name = row["file_name"] + ".wav"
+    label = 0 if row["label"] == -1 else 1  # Map -1 to 0 (normal) and 1 to 1 (abnormal)
+    file_path = None
 
-    # Loop through all files in the current directory
-    for file_name in os.listdir(audio_dir):
-        # Process only .wav files
-        if file_name.endswith('.wav'):
-            file_path = os.path.join(audio_dir, file_name)
-            print(f"Processing file: {file_path}")
+    # Check in all directories
+    for audio_dir in data_dir:
+        potential_file_path = os.path.join(audio_dir, file_name)
+        if os.path.exists(potential_file_path):
+            file_path = potential_file_path
+            break
 
-            try:
-                # Load the audio file
-                y, sr = librosa.load(file_path, sr=None)
-                
-                # Extract MFCCs
-                mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30).mean(axis=1)
-                
-                # Add MFCCs and label to lists
-                features.append(mfccs)
-                
-                # Here, replace with actual labels (0 for normal, 1 for abnormal)
-                # For example, if 'set_a' is normal, label as 0, otherwise as 1.
-                label = 0 if 'set_a' in audio_dir else 1
-                labels.append(label)
-
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
+    if file_path:
+        try:
+            # Load audio and extract features
+            y, sr = librosa.load(file_path, sr=None)
+            mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30).mean(axis=1)
+            
+            features.append(mfccs)
+            labels.append(label)
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+    else:
+        print(f"File not found: {file_name}")
 
 # Convert to arrays and save
 X = np.array(features)
@@ -98,5 +57,3 @@ y = np.array(labels)
 np.save('X.npy', X)
 np.save('y.npy', y)
 print("Feature extraction complete. Features and labels saved.")
-
-
