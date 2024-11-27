@@ -6,6 +6,9 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
 from collections import Counter
+import joblib
+
+
 
 # Load the datasets
 datasets = [
@@ -27,14 +30,12 @@ for dataset in datasets:
     # Step 2: Apply PCA for noise cancellation
     pca = PCA(n_components=0.95, random_state=42)
     X_denoised = pca.fit_transform(X_scaled)
-
     print("Original shape:", X.shape)
     print("Shape after noise cancellation:", X_denoised.shape)
 
     # Step 3: Apply SMOTE to handle class imbalance
     smote = SMOTE(random_state=42)
     X_res, y_res = smote.fit_resample(X_denoised, y)
-
     print("Class distribution before SMOTE:", Counter(y))
     print("Class distribution after SMOTE:", Counter(y_res))
 
@@ -61,13 +62,16 @@ for dataset in datasets:
 #===============================================================================================================
 #===============================================================================================================
 
-
-# In model.py (where you train the model)
-import joblib
-
-# Train the model (SVM in your case)
 svm.fit(X_train, y_train)
 
-# Save the trained model to a file
-joblib.dump(svm, 'svm_model.pkl')
-print("Model saved as 'svm_model.pkl'")
+# Save the trained SVM model to a file
+joblib.dump(svm, 'Data/svm_model.pkl')
+print("SVM model saved as 'svm_model.pkl'")
+
+# Save the scaler
+joblib.dump(scaler, 'Data/scaler.pkl')
+print("Scaler saved as 'scaler.pkl'")
+
+# Save the PCA
+joblib.dump(pca, 'Data/pca.pkl')
+print("PCA model saved as 'pca.pkl'")

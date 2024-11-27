@@ -57,7 +57,7 @@ import pandas as pd
 
 
 # List of directories containing audio files
-audio_dirs = ['raw/set_a', 'raw/set_b']  # Add more directories if needed
+audio_dirs = ['Data/raw/set_a', 'Data/raw/set_b']  # Add more directories if needed
 
 # Prepare lists to collect data
 features = []
