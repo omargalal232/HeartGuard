@@ -79,7 +79,7 @@ for audio_dir in audio_dirs:
                 y, sr = librosa.load(file_path, sr=None)
                 
                 # Extract MFCCs
-                mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13).mean(axis=1)
+                mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30).mean(axis=1)
                 
                 # Add MFCCs and label to lists
                 features.append(mfccs)

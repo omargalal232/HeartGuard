@@ -13,7 +13,7 @@ def preprocess_audio(file_path):
     y, sr = librosa.load(file_path, sr=None)  # sr=None to preserve the original sample rate
     
     # Extract MFCC features
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)  # Extract 13 MFCCs
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=30)  # Extract 13 MFCCs
     
     # Average the MFCCs across time (axis=1) and flatten it into a 1D array
     features = np.mean(mfcc.T, axis=0)

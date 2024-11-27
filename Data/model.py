@@ -13,8 +13,8 @@ import joblib
 # Load the datasets
 datasets = [
     {
-        "X": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\x.npy"), 
-        "y": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\Data\y.npy")
+        "X": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\X.npy"), 
+        "y": np.load(r"C:\Users\Egy Sky\Documents\GitHub\SWE-project\HeartGuard\y.npy")
     }
 ]
 
