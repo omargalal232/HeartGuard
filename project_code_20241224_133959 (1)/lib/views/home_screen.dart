@@ -50,6 +50,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
+      
+      
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -207,6 +209,10 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+
+
+
 
           // Latest ECG Recording
           Card(
