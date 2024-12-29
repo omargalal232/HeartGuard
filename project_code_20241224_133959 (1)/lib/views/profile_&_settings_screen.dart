@@ -91,7 +91,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        ' Dr Taraggy',
+                        'Dr Taraggy',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -258,14 +258,14 @@ class ProfileSettingsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildEmergencyContact(
                     context,
-                    'John Smith',
-                    '+1 (555) 123-4567',
+                    'Omar Galal',
+                    '0122 566 3158',
                   ),
                   const SizedBox(height: 16),
                   _buildEmergencyContact(
                     context,
-                    'Mary Wilson',
-                    '+1 (555) 987-6543',
+                    'Mohamed Hisham',
+                    '0128 176 0571',
                   ),
                 ],
               ),
