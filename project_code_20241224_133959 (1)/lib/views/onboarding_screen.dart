@@ -9,7 +9,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           ListView(
@@ -34,8 +34,8 @@ class OnboardingScreen extends StatelessWidget {
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                           colors: [
-                            Theme.of(context).colorScheme.background,
-                            Theme.of(context).colorScheme.background.withOpacity(0),
+                            Theme.of(context).colorScheme.surface,
+                            Theme.of(context).colorScheme.surface.withOpacity(0),
                           ],
                         ),
                       ),
@@ -64,7 +64,7 @@ class OnboardingScreen extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onBackground,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -78,7 +78,7 @@ class OnboardingScreen extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onBackground,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -106,9 +106,9 @@ class OnboardingScreen extends StatelessWidget {
                       description: 'Advanced AI processing for accurate results',
                     ),
                     const SizedBox(height: 16),
-                    FeatureItem(
+                    const FeatureItem(
                       icon: LucideIcons.bell,
-                      color: const Color(0xFF06B6D4), // accent color
+                      color: Color(0xFF06B6D4), // accent color
                       title: 'Instant Alerts',
                       description: 'Get notified about important changes',
                     ),
@@ -240,7 +240,7 @@ class FeatureItem extends StatelessWidget {
                 title,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(

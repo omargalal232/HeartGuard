@@ -11,7 +11,7 @@ class ECGRecordingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
@@ -56,14 +56,14 @@ class ECGRecordingScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        Icon(LucideIcons.activity, size: 20, color: const Color(0xFF10B981)),
-                        const SizedBox(width: 8),
+                        Icon(LucideIcons.activity, size: 20, color: Color(0xFF10B981)),
+                        SizedBox(width: 8),
                         Text(
                           'Device Connected',
                           style: TextStyle(
-                            color: const Color(0xFF10B981),
+                            color: Color(0xFF10B981),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
