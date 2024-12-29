@@ -91,7 +91,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Sarah Johnson',
+                        ' Dr Taraggy',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -99,7 +99,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'sarah.j@email.com',
+                        'tarraggy@email.com',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSecondary,
                         ),
@@ -338,7 +338,8 @@ class ProfileSettingsScreen extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                backgroundColor:
+                    Theme.of(context).colorScheme.error.withOpacity(0.1),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
