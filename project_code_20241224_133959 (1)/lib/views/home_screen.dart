@@ -4,6 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'ecg_recording_screen.dart';
 import 'analysis_&_alerts_screen.dart';
 import 'profile_&_settings_screen.dart';
+import '../controllers/user_controller.dart';
+import '../controllers/ecg_controller.dart';
+import '../controllers/alert_controller.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,11 +20,11 @@ class HomeScreen extends StatelessWidget {
         elevation: 1,
         title: Row(
           children: [
-            Icon(LucideIcons.heartPulse, 
-              size: 32, 
-              color: Theme.of(context).colorScheme.primary),
+            Icon(LucideIcons.heartPulse,
+                size: 32, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Text('HeartGuard',
+            Text(
+              'HeartGuard',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -31,8 +34,8 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          Icon(LucideIcons.bell, 
-            color: Theme.of(context).colorScheme.onSecondary),
+          Icon(LucideIcons.bell,
+              color: Theme.of(context).colorScheme.onSecondary),
           const SizedBox(width: 16),
           Container(
             width: 32,
@@ -41,9 +44,8 @@ class HomeScreen extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(LucideIcons.user, 
-              size: 20,
-              color: Theme.of(context).colorScheme.primary),
+            child: Icon(LucideIcons.user,
+                size: 20, color: Theme.of(context).colorScheme.primary),
           ),
           const SizedBox(width: 16),
         ],
@@ -60,7 +62,8 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Current Status',
+                      Text(
+                        'Current Status',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -76,7 +79,8 @@ class HomeScreen extends StatelessWidget {
                           color: const Color(0xFF10B981).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('Healthy',
+                        child: const Text(
+                          'Healthy',
                           style: TextStyle(
                             color: Color(0xFF10B981),
                             fontSize: 14,
@@ -92,25 +96,32 @@ class HomeScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.05),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             children: [
                               Icon(LucideIcons.heart,
-                                color: Theme.of(context).colorScheme.primary),
+                                  color: Theme.of(context).colorScheme.primary),
                               const SizedBox(height: 4),
-                              Text('Heart Rate',
+                              Text(
+                                'Heart Rate',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
-                              Text('72 BPM',
+                              Text(
+                                '72 BPM',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -122,25 +133,33 @@ class HomeScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.05),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             children: [
                               Icon(LucideIcons.activity,
-                                color: Theme.of(context).colorScheme.secondary),
+                                  color:
+                                      Theme.of(context).colorScheme.secondary),
                               const SizedBox(height: 4),
-                              Text('ECG',
+                              Text(
+                                'ECG',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
-                              Text('Normal',
+                              Text(
+                                'Normal',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -158,19 +177,23 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             children: [
                               Icon(LucideIcons.batteryCharging,
-                                color: const Color(0xFF06B6D4)),
+                                  color: const Color(0xFF06B6D4)),
                               const SizedBox(height: 4),
-                              Text('Device',
+                              Text(
+                                'Device',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
-                              Text('92%',
+                              Text(
+                                '92%',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -194,7 +217,8 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Latest ECG',
+                      Text(
+                        'Latest ECG',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -203,7 +227,8 @@ class HomeScreen extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {},
-                        child: Text('View All',
+                        child: Text(
+                          'View All',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -227,13 +252,15 @@ class HomeScreen extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Regular Rhythm',
+                          Text(
+                            'Regular Rhythm',
                             style: TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
-                          Text('Today, 10:30 AM',
+                          Text(
+                            'Today, 10:30 AM',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSecondary,
@@ -246,7 +273,8 @@ class HomeScreen extends StatelessWidget {
                         icon: const Icon(LucideIcons.fileText, size: 16),
                         label: const Text('Report'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -280,14 +308,18 @@ class HomeScreen extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(LucideIcons.plusCircle,
-                              color: Theme.of(context).colorScheme.primary),
+                                color: Theme.of(context).colorScheme.primary),
                           ),
                           const SizedBox(height: 8),
-                          Text('New Recording',
+                          Text(
+                            'New Recording',
                             style: TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -310,14 +342,18 @@ class HomeScreen extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(LucideIcons.history,
-                            color: Theme.of(context).colorScheme.secondary),
+                              color: Theme.of(context).colorScheme.secondary),
                         ),
                         const SizedBox(height: 8),
-                        Text('History',
+                        Text(
+                          'History',
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -339,7 +375,8 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Connected Devices',
+                  Text(
+                    'Connected Devices',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -369,23 +406,27 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('HeartGuard Watch Pro',
+                              Text(
+                                'HeartGuard Watch Pro',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              Text('Connected • Battery 92%',
+                              Text(
+                                'Connected • Battery 92%',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         Icon(LucideIcons.bluetooth,
-                          color: Theme.of(context).colorScheme.primary),
+                            color: Theme.of(context).colorScheme.primary),
                       ],
                     ),
                   ),
@@ -404,7 +445,8 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Recent Alerts',
+                      Text(
+                        'Recent Alerts',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -413,7 +455,8 @@ class HomeScreen extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {},
-                        child: Text('View All',
+                        child: Text(
+                          'View All',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -437,7 +480,8 @@ class HomeScreen extends StatelessWidget {
                             color: const Color(0xFF10B981).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(LucideIcons.checkCircle,
+                          child: const Icon(
+                            LucideIcons.checkCircle,
                             color: Color(0xFF10B981),
                             size: 20,
                           ),
@@ -447,16 +491,20 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Normal Heart Rhythm',
+                              Text(
+                                'Normal Heart Rhythm',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              Text('2 hours ago',
+                              Text(
+                                '2 hours ago',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
                             ],
@@ -481,7 +529,8 @@ class HomeScreen extends StatelessWidget {
                             color: const Color(0xFFF59E0B).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(LucideIcons.alertCircle,
+                          child: const Icon(
+                            LucideIcons.alertCircle,
                             color: Color(0xFFF59E0B),
                             size: 20,
                           ),
@@ -491,16 +540,20 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Elevated Heart Rate',
+                              Text(
+                                'Elevated Heart Rate',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              Text('Yesterday, 8:45 PM',
+                              Text(
+                                'Yesterday, 8:45 PM',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSecondary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSecondary,
                                 ),
                               ),
                             ],
@@ -542,12 +595,14 @@ class HomeScreen extends StatelessWidget {
           if (index == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AnalysisAndAlertsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const AnalysisAndAlertsScreen()),
             );
           } else if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ProfileSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const ProfileSettingsScreen()),
             );
           }
         },
