@@ -375,7 +375,7 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const ProfileAndSettingsScreen()),
+              MaterialPageRoute(builder: (context) => const ProfileSettingsScreen()),
             );
           }
         },

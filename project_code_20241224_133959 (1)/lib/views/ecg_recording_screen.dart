@@ -375,7 +375,7 @@ class ECGRecordingScreen extends StatelessWidget {
             case 2:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const AnalysisAlertsScreen()),
+                MaterialPageRoute(builder: (context) => const AnalysisAndAlertsScreen()),
               );
               break;
             case 3:

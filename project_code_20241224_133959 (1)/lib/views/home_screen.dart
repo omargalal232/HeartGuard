@@ -542,7 +542,7 @@ class HomeScreen extends StatelessWidget {
           if (index == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const AnalysisAlertsScreen()),
+              MaterialPageRoute(builder: (context) => const AnalysisAndAlertsScreen()),
             );
           } else if (index == 3) {
             Navigator.push(
