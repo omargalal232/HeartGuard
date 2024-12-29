@@ -1,0 +1,35 @@
+name: heartguard
+description: Your Personal Heart Health Guardian
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  lucide_icons: ^0.257.0
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+  provider: ^6.1.2
+  image_picker: ^1.0.7
+  fl_chart: ^0.69.2
+  web_socket_channel: ^3.0.1
+  firebase_messaging: ^14.7.10
+  sqflite: ^2.4.1
+  flutter_local_notifications: ^18.0.1
+  mqtt_client: ^10.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  change_app_package_name: ^1.4.0
+
+flutter:
+  uses-material-design: true
