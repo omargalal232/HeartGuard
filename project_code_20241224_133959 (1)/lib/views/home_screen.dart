@@ -11,7 +11,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
@@ -157,8 +157,8 @@ class HomeScreen extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
-                              Icon(LucideIcons.batteryCharging,
-                                color: const Color(0xFF06B6D4)),
+                              const Icon(LucideIcons.batteryCharging,
+                                color: Color(0xFF06B6D4)),
                               const SizedBox(height: 4),
                               Text('Device',
                                 style: TextStyle(
@@ -350,7 +350,7 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(

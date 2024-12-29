@@ -7,7 +7,7 @@ class ProfileSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: ListView(
         children: [
           // Top Navigation Bar
@@ -432,10 +432,10 @@ class ProfileSettingsScreen extends StatelessWidget {
       onTap: () {},
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: const Color(0xFFE2E8F0),
+              color: Color(0xFFE2E8F0),
               width: 1,
             ),
           ),
