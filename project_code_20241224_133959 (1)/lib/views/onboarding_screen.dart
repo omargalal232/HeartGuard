@@ -17,8 +17,8 @@ class OnboardingScreen extends StatelessWidget {
               // Image Section with Gradient Overlay
               Stack(
                 children: [
-                  Image.network(
-                    'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_99015ee4-648f-40da-a68e-183d0314bbe4.webp',
+                   Image.asset(
+                    'assets/img/background.png',
                     height: MediaQuery.of(context).size.height * 0.6,
                     width: double.infinity,
                     fit: BoxFit.cover,

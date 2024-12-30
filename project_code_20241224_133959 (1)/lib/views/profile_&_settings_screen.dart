@@ -90,7 +90,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                       ),
                       image: const DecorationImage(
                         image: NetworkImage(
-                          'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_5109962e-ef45-4814-a838-e2ca7f9c43dd.webp',
+                          'assets/img/avatar.png',
                         ),
                         fit: BoxFit.cover,
                       ),
@@ -190,8 +190,8 @@ class ProfileSettingsScreen extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_0526fcdc-291c-4d10-8b10-a243b51a219f.webp',
+                        child: Image.asset(
+                           'assets/img/ecg watch.png',
                           width: 64,
                           height: 64,
                           fit: BoxFit.cover,

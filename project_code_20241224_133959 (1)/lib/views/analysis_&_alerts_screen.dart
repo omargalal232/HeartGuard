@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 import 'profile_&_settings_screen.dart';
 
@@ -160,8 +159,8 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_42ba56dd-e77e-4b7f-b292-407ab3ff726c.webp',
+                    child: Image.asset(
+                      'assets/img/ecg img.png',
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
@@ -310,8 +309,8 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_dbd8ad59-b3bf-4de6-a7ab-f07631102a7c.webp',
+                        child: Image.asset(
+                         'assets/img/images.png',
                           width: 80,
                           height: 80,
                           fit: BoxFit.cover,
