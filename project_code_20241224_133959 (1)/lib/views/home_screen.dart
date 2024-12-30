@@ -178,8 +178,8 @@ class HomeScreen extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
-                              Icon(LucideIcons.batteryCharging,
-                                  color: const Color(0xFF06B6D4)),
+                              const Icon(LucideIcons.batteryCharging,
+                                  color: Color(0xFF06B6D4)),
                               const SizedBox(height: 4),
                               Text(
                                 'Device',
@@ -245,8 +245,8 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_4a039a92-4d7f-48d6-b8c6-0be054fc349e.webp',
+                    child: Image.asset(
+                      'assets/img/ecg home page.png',
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
@@ -400,8 +400,8 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            'https://storage.googleapis.com/cades-dev.appspot.com/projects/jHueck8UCocCkJENtkHe/assets/0_fab34283-ae40-4f97-9c9e-0ac685403b74.webp',
+                          child: Image.asset(
+                           'assets/img/ecg watch.png',
                             width: 64,
                             height: 64,
                             fit: BoxFit.cover,

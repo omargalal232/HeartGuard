@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 import 'profile_&_settings_screen.dart';
 import 'analysis_&_alerts_screen.dart';
