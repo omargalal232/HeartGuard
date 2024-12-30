@@ -12,18 +12,29 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        leading: Icon(LucideIcons.chevronLeft, color: Theme.of(context).colorScheme.primary),
-        title: Text('Analysis & Alerts', 
+        leading: IconButton(
+          icon: Icon(LucideIcons.chevronLeft,
+              color: Theme.of(context).colorScheme.primary),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+        ),
+        title: Text(
+          'Analysis & Alerts',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onPrimary
-          )
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
         ),
         actions: [
           Icon(LucideIcons.bell, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 16),
-          Icon(LucideIcons.settings, color: Theme.of(context).colorScheme.primary),
+          Icon(LucideIcons.settings,
+              color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 16),
         ],
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -43,24 +54,22 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Current Status',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onPrimary
-                        )
-                      ),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onPrimary)),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text('Normal',
-                          style: TextStyle(
-                            color: Color(0xFF10B981),
-                            fontWeight: FontWeight.w500,
-                          )
-                        ),
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.w500,
+                            )),
                       ),
                     ],
                   ),
@@ -79,27 +88,29 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Icon(LucideIcons.heartPulse, 
-                                    size: 20,
-                                    color: Theme.of(context).colorScheme.primary
-                                  ),
+                                  Icon(LucideIcons.heartPulse,
+                                      size: 20,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
                                   const SizedBox(width: 8),
                                   Text('Heart Rate',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSecondary,
-                                      fontSize: 14,
-                                    )
-                                  ),
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSecondary,
+                                        fontSize: 14,
+                                      )),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text('72 BPM',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onPrimary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary)),
                             ],
                           ),
                         ),
@@ -117,27 +128,29 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Icon(LucideIcons.activity, 
-                                    size: 20,
-                                    color: Theme.of(context).colorScheme.primary
-                                  ),
+                                  Icon(LucideIcons.activity,
+                                      size: 20,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary),
                                   const SizedBox(width: 8),
                                   Text('ECG',
-                                    style: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSecondary,
-                                      fontSize: 14,
-                                    )
-                                  ),
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSecondary,
+                                        fontSize: 14,
+                                      )),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text('Normal',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onPrimary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary)),
                             ],
                           ),
                         ),
@@ -167,12 +180,10 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Recent Alerts',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onPrimary
-                    )
-                  ),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onPrimary)),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -188,7 +199,8 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             color: const Color(0xFFF59E0B).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Icon(LucideIcons.alertTriangle,
+                          child: const Icon(
+                            LucideIcons.alertTriangle,
                             color: Color(0xFFF59E0B),
                           ),
                         ),
@@ -198,23 +210,22 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Elevated Heart Rate',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onPrimary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary)),
                               Text('Today, 2:30 PM - 95 BPM',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSecondary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondary)),
                             ],
                           ),
                         ),
                         Icon(LucideIcons.chevronRight,
-                          color: Theme.of(context).colorScheme.onSecondary
-                        ),
+                            color: Theme.of(context).colorScheme.onSecondary),
                       ],
                     ),
                   ),
@@ -233,7 +244,8 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             color: const Color(0xFF10B981).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Icon(LucideIcons.checkCircle,
+                          child: const Icon(
+                            LucideIcons.checkCircle,
                             color: Color(0xFF10B981),
                           ),
                         ),
@@ -243,23 +255,22 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Normal ECG Pattern',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onPrimary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary)),
                               Text('Today, 10:15 AM',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSecondary
-                                )
-                              ),
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondary)),
                             ],
                           ),
                         ),
                         Icon(LucideIcons.chevronRight,
-                          color: Theme.of(context).colorScheme.onSecondary
-                        ),
+                            color: Theme.of(context).colorScheme.onSecondary),
                       ],
                     ),
                   ),
@@ -280,20 +291,17 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Analysis Summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onPrimary
-                        )
-                      ),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onPrimary)),
                       TextButton(
                         onPressed: () {},
                         child: Text('View Full Report',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w500,
-                          )
-                        ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            )),
                       ),
                     ],
                   ),
@@ -315,30 +323,33 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('AI-Powered Analysis',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onPrimary
-                              )
-                            ),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary)),
                             const SizedBox(height: 4),
                             Text(
-                              'Based on your last 7 days of data, your heart health indicators are within normal ranges.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSecondary
-                              )
-                            ),
+                                'Based on your last 7 days of data, your heart health indicators are within normal ranges.',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondary)),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildProgressBar(context, 'Heart Rate Variability', 0.75, const Color(0xFF10B981)),
+                  _buildProgressBar(context, 'Heart Rate Variability', 0.75,
+                      const Color(0xFF10B981)),
                   const SizedBox(height: 12),
-                  _buildProgressBar(context, 'ECG Quality', 1.0, Theme.of(context).colorScheme.primary),
+                  _buildProgressBar(context, 'ECG Quality', 1.0,
+                      Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 12),
-                  _buildProgressBar(context, 'Data Consistency', 0.8, Theme.of(context).colorScheme.secondary),
+                  _buildProgressBar(context, 'Data Consistency', 0.8,
+                      Theme.of(context).colorScheme.secondary),
                 ],
               ),
             ),
@@ -375,7 +386,8 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const ProfileSettingsScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const ProfileSettingsScreen()),
             );
           }
         },
@@ -383,16 +395,15 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(BuildContext context, String label, double value, Color color) {
+  Widget _buildProgressBar(
+      BuildContext context, String label, double value, Color color) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.onSecondary
-          )
-        ),
+            style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSecondary)),
         const SizedBox(width: 16),
         SizedBox(
           width: 128,

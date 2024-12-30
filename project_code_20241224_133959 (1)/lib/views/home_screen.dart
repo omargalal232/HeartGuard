@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'ecg_recording_screen.dart';
 import 'analysis_&_alerts_screen.dart';
 import 'profile_&_settings_screen.dart';
+import 'reports_screen.dart';
 import '../controllers/user_controller.dart';
 import '../controllers/ecg_controller.dart';
 import '../controllers/alert_controller.dart';
@@ -50,8 +51,6 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
-      
-      
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -209,10 +208,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-
-
-
-
 
           // Latest ECG Recording
           Card(
@@ -603,6 +598,12 @@ class HomeScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                   builder: (context) => const AnalysisAndAlertsScreen()),
+            );
+          } else if (index == 2) {
+            // Navigate to ReportsScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReportsScreen()),
             );
           } else if (index == 3) {
             Navigator.push(

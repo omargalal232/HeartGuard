@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'home_screen.dart';
 
 class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
@@ -25,23 +26,32 @@ class ProfileSettingsScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      LucideIcons.chevronLeft,
-                      size: 24,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Profile & Settings',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                InkWell(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HomeScreen()),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.chevronLeft,
+                        size: 24,
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        'Profile & Settings',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Icon(
                   LucideIcons.bell,
@@ -266,6 +276,12 @@ class ProfileSettingsScreen extends StatelessWidget {
                     context,
                     'Mohamed Hisham',
                     '0128 176 0571',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildEmergencyContact(
+                    context,
+                    'Yousif Khaled',
+                    '0103 208 0598',
                   ),
                 ],
               ),
