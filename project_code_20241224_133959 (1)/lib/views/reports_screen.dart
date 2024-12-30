@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'home_screen.dart';
+import 'analysis_&_alerts_screen.dart';
+import 'profile_&_settings_screen.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -93,7 +95,7 @@ class ReportsScreen extends StatelessWidget {
                   _buildReportItem(context, 'ECG Report', 'Normal Rhythm',
                       'Today, 10:30 AM'),
                   const SizedBox(height: 12),
-                  _buildReportItem(context, 'Heart Rate Report', '72 BPM',
+                  _buildReportItem(context, 'ECG Report 2', 'Abnormal Rhythm',
                       'Yesterday, 8:45 PM'),
                   const SizedBox(height: 12),
                   _buildReportItem(context, 'Blood Pressure Report',
@@ -103,6 +105,50 @@ class ReportsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSecondary,
+        currentIndex: 2, // Set current index to Reports
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.activity),
+            label: 'Analytics',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.calendar),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.settings),
+            label: 'Settings',
+          ),
+        ],
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const AnalysisAndAlertsScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ProfileSettingsScreen()),
+            );
+          }
+        },
       ),
     );
   }

@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/img/ecg home page.png
+    - assets/img/avatar.png
     - assets/img/ecg watch.png
     - assets/img/background.png
     - assets/img/ecg img.png

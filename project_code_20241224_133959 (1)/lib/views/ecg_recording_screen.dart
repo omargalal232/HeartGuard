@@ -15,7 +15,8 @@ class ECGRecordingScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(LucideIcons.chevronLeft, color: Theme.of(context).colorScheme.primary),
+          icon: Icon(LucideIcons.chevronLeft,
+              color: Theme.of(context).colorScheme.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -27,9 +28,13 @@ class ECGRecordingScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(LucideIcons.settings, color: Theme.of(context).colorScheme.primary),
+            icon: Icon(LucideIcons.settings,
+                color: Theme.of(context).colorScheme.primary),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileSettingsScreen()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ProfileSettingsScreen()));
             },
           ),
         ],
@@ -57,7 +62,8 @@ class ECGRecordingScreen extends StatelessWidget {
                   children: [
                     const Row(
                       children: [
-                        Icon(LucideIcons.activity, size: 20, color: Color(0xFF10B981)),
+                        Icon(LucideIcons.activity,
+                            size: 20, color: Color(0xFF10B981)),
                         SizedBox(width: 8),
                         Text(
                           'Device Connected',
@@ -168,7 +174,8 @@ class ECGRecordingScreen extends StatelessWidget {
                             Text(
                               'BPM',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSecondary,
+                                color:
+                                    Theme.of(context).colorScheme.onSecondary,
                                 fontSize: 14,
                               ),
                             ),
@@ -234,10 +241,14 @@ class ECGRecordingScreen extends StatelessWidget {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .error
+                                .withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(LucideIcons.pause, color: Theme.of(context).colorScheme.error),
+                          child: Icon(LucideIcons.pause,
+                              color: Theme.of(context).colorScheme.error),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -258,7 +269,8 @@ class ECGRecordingScreen extends StatelessWidget {
                             color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(LucideIcons.circle, color: Colors.white, size: 32),
+                          child: const Icon(LucideIcons.circle,
+                              color: Colors.white, size: 32),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -279,7 +291,8 @@ class ECGRecordingScreen extends StatelessWidget {
                             color: const Color(0xFFF59E0B).withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(LucideIcons.flag, color: Color(0xFFF59E0B)),
+                          child: const Icon(LucideIcons.flag,
+                              color: Color(0xFFF59E0B)),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -316,7 +329,8 @@ class ECGRecordingScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(LucideIcons.lightbulb, size: 20, color: Color(0xFFF59E0B)),
+                    const Icon(LucideIcons.lightbulb,
+                        size: 20, color: Color(0xFFF59E0B)),
                     const SizedBox(width: 8),
                     Text(
                       'Recording Tips',
@@ -328,11 +342,14 @@ class ECGRecordingScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildTip(context, 'Ensure the device is properly attached to your chest'),
+                _buildTip(context,
+                    'Ensure the device is properly attached to your chest'),
                 const SizedBox(height: 12),
-                _buildTip(context, 'Stay still during recording for accurate results'),
+                _buildTip(context,
+                    'Stay still during recording for accurate results'),
                 const SizedBox(height: 12),
-                _buildTip(context, 'Record for at least 5 minutes for comprehensive analysis'),
+                _buildTip(context,
+                    'Record for at least 5 minutes for comprehensive analysis'),
               ],
             ),
           ),
@@ -355,12 +372,12 @@ class ECGRecordingScreen extends StatelessWidget {
             label: 'Record',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.barChart),
+            icon: Icon(LucideIcons.calendar),
             label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.user),
-            label: 'Profile',
+            icon: Icon(LucideIcons.settings),
+            label: 'Settings',
           ),
         ],
         onTap: (index) {
@@ -374,13 +391,15 @@ class ECGRecordingScreen extends StatelessWidget {
             case 2:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const AnalysisAndAlertsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const AnalysisAndAlertsScreen()),
               );
               break;
             case 3:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfileSettingsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const ProfileSettingsScreen()),
               );
               break;
           }

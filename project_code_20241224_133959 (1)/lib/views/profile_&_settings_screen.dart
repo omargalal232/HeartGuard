@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'home_screen.dart';
+import 'analysis_&_alerts_screen.dart';
+import 'profile_&_settings_screen.dart';
+import 'reports_screen.dart';
 
 class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({super.key});
@@ -101,7 +104,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Dr Taraggy',
+                        'Ahmed ElSayed Zizo',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -191,7 +194,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                           'assets/img/ecg watch.png',
+                          'assets/img/ecg watch.png',
                           width: 64,
                           height: 64,
                           fit: BoxFit.cover,
@@ -382,6 +385,50 @@ class ProfileSettingsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSecondary,
+        currentIndex: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.activity),
+            label: 'Analytics',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.calendar),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.settings),
+            label: 'Settings',
+          ),
+        ],
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const AnalysisAndAlertsScreen()),
+            );
+          } else if (index == 2) {
+            // Navigate to ReportsScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReportsScreen()),
+            );
+          } else if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        },
       ),
     );
   }

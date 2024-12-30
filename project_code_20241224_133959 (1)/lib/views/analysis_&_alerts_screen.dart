@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'home_screen.dart';
 import 'profile_&_settings_screen.dart';
+import 'reports_screen.dart';
 
 class AnalysisAndAlertsScreen extends StatelessWidget {
   const AnalysisAndAlertsScreen({super.key});
@@ -310,7 +311,7 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                         'assets/img/images.png',
+                          'assets/img/images.png',
                           width: 80,
                           height: 80,
                           fit: BoxFit.cover,
@@ -368,22 +369,28 @@ class AnalysisAndAlertsScreen extends StatelessWidget {
             label: 'Analysis',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.history),
-            label: 'History',
+            icon: Icon(LucideIcons.calendar),
+            label: 'Reports',
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.user),
-            label: 'Profile',
+            icon: Icon(LucideIcons.settings),
+            label: 'Settings',
           ),
         ],
         onTap: (index) {
           if (index == 0) {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
+          } else if (index == 2) {
+            // Navigate to ReportsScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReportsScreen()),
+            );
           } else if (index == 3) {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => const ProfileSettingsScreen()),
