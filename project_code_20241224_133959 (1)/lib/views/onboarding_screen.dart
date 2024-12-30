@@ -186,7 +186,7 @@ class OnboardingScreen extends StatelessWidget {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) =>
-                          const HomeScreen(), // Navigate to SignupScreen
+                          const HomeScreen(), // Navigate to HomeScreen
                     ),
                   );
                 },
