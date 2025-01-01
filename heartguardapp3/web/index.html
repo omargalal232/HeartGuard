@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="heartguardapp3">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>heartguardapp3</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="notification-icon" content="icons/notification_icon.png">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAljUNCr6Qh6FikDif2oDZ6tU38wENopC0",
+      authDomain: "heart-guard-1c49e.firebaseapp.com",
+      projectId: "heart-guard-1c49e",
+      storageBucket: "heart-guard-1c49e.appspot.com",
+      messagingSenderId: "872244640879",
+      appId: "1:872244640879:android:53503e5e780fc6a82a619a",
+      databaseURL: "https://heart-guard-1c49e-default-rtdb.firebaseio.com"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+  </script>
+</head>
+<body>
+  <div id="loading">
+    <style>
+      body {
+        margin: 0;
+        background-color: #FF0000;
+      }
+      #loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: white;
+      }
+      .loading-indicator {
+        width: 50px;
+        height: 50px;
+        border: 3px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 3px solid #FF0000;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+    <div class="loading-indicator"></div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loading = document.getElementById('loading');
+        if (loading) {
+          loading.remove();
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
