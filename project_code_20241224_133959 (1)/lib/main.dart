@@ -1,5 +1,5 @@
-import './common/constants.dart';
-import './pages/onboarding_screen.dart';
+//import './common/constants.dart';
+import 'views/onboarding_screen.dart';
 import './styles/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -14,7 +14,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: appName,
+      debugShowCheckedModeBanner: false, // Removes the debug banner
+      title: "Heart Guard",
       theme: theme,
       home: const OnboardingScreen(),
     );
