@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
+import 'dart:io';
 import '../../models/sensor_data_model.dart';
 import '../../services/websocket_service.dart';
 
@@ -122,22 +123,43 @@ class _WebSocketScreenState extends State<WebSocketScreen> with WidgetsBindingOb
     setState(() {
       _isLoading = true;
       _status = 'Connecting...';
+      _sensorData.clear();
+      _timeIndex = 0;
+      _currentValue = 0;
+      _minValue = double.infinity;
+      _maxValue = double.negativeInfinity;
+      _avgValue = 0;
+      _totalReadings = 0;
     });
 
     try {
       await _webSocketService.connect(ipAddress);
       await _saveIpAddress(ipAddress);
       _listenToSensorData();
+      _listenToConnectionStatus();
       
       setState(() {
         _status = 'Connected to $ipAddress';
         _isLoading = false;
       });
-    } catch (e) {
+    } on SocketException catch (e) {
       setState(() {
-        _status = 'Failed to connect: ${e.toString()}';
+        _status = 'Connection failed: Device not reachable';
         _isLoading = false;
       });
+      _showError(
+        'Cannot connect to ESP32. Please check if:\n'
+        '• Device is powered on\n'
+        '• Connected to same network\n'
+        '• IP address is correct\n'
+        '• Port 81 is not blocked'
+      );
+    } catch (e) {
+      setState(() {
+        _status = 'Connection error: ${e.toString()}';
+        _isLoading = false;
+      });
+      _showError('Failed to connect: ${e.toString()}');
     }
   }
 
@@ -185,12 +207,101 @@ class _WebSocketScreenState extends State<WebSocketScreen> with WidgetsBindingOb
     });
   }
 
-  /// Shows error message to user
+  /// Listen to WebSocket connection status
+  void _listenToConnectionStatus() {
+    _webSocketService.connectionStatus.listen(
+      (String status) {
+        if (!mounted) return;
+        
+        setState(() {
+          _status = status;
+          _isLoading = status.contains('Connecting') || 
+                      status.contains('Testing') || 
+                      status.contains('Establishing');
+        });
+
+        // Show error dialog for error states
+        if (status.toLowerCase().contains('error') || 
+            status.toLowerCase().contains('failed')) {
+          _showError(status);
+        }
+      },
+      onError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _status = 'Status error: ${error.toString()}';
+          _isLoading = false;
+        });
+      },
+    );
+  }
+
+  /// Shows an error dialog with the given message
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Connection Error',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            const SizedBox(height: 16),
+            const Text(
+              'Troubleshooting steps:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...const [
+              '• Check if ESP32 is powered on',
+              '• Verify you are on the same WiFi network',
+              '• Confirm the IP address is correct',
+              '• Make sure ESP32 WebSocket server is running',
+              '• Check if ESP32 is accessible in browser',
+              '• Try restarting the ESP32',
+              '• Check your network connection',
+            ].map((step) => Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(step),
+            )),
+            const SizedBox(height: 16),
+            const Text(
+              'ESP32 Setup:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...const [
+              '• ESP32 should be running WebSocket server',
+              '• WebSocket endpoint should be at /ws',
+              '• Server should send numeric sensor data',
+              '• Data format: {"sensor": value} or {"value": value}',
+            ].map((step) => Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(step),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          if (!message.toLowerCase().contains('failed to establish'))
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _connect();
+              },
+              child: const Text('Retry'),
+            ),
+        ],
       ),
     );
   }
@@ -386,12 +497,57 @@ class _WebSocketScreenState extends State<WebSocketScreen> with WidgetsBindingOb
                           maxX: _sensorData.last.x,
                           minY: _minY,
                           maxY: _maxY,
+                          lineTouchData: LineTouchData(
+                            enabled: true,
+                            touchTooltipData: LineTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                                return touchedSpots.map((LineBarSpot touchedSpot) {
+                                  return LineTooltipItem(
+                                    'Value: ${touchedSpot.y.toStringAsFixed(2)}\nTime: ${touchedSpot.x.toInt()}',
+                                    TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                }).toList();
+                              },
+                            ),
+                            handleBuiltInTouches: true,
+                          ),
                           titlesData: FlTitlesData(
                             leftTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: true),
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 40,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    value.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                              axisNameWidget: const Text('Value'),
                             ),
                             bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: true),
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    value.toInt().toString(),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
+                              ),
+                              axisNameWidget: const Text('Time'),
                             ),
                             topTitles: AxisTitles(
                               sideTitles: SideTitles(showTitles: false),
@@ -400,23 +556,61 @@ class _WebSocketScreenState extends State<WebSocketScreen> with WidgetsBindingOb
                               sideTitles: SideTitles(showTitles: false),
                             ),
                           ),
-                          borderData: FlBorderData(show: true),
-                          gridData: FlGridData(show: _showGrid),
+                          borderData: FlBorderData(
+                            show: true,
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
+                          gridData: FlGridData(
+                            show: _showGrid,
+                            drawVerticalLine: true,
+                            horizontalInterval: 10,
+                            verticalInterval: 5,
+                            getDrawingHorizontalLine: (value) {
+                              return FlLine(
+                                color: Colors.grey.shade200,
+                                strokeWidth: 1,
+                              );
+                            },
+                            getDrawingVerticalLine: (value) {
+                              return FlLine(
+                                color: Colors.grey.shade200,
+                                strokeWidth: 1,
+                              );
+                            },
+                          ),
                           lineBarsData: [
                             LineChartBarData(
                               spots: _sensorData,
                               isCurved: _isCurved,
                               color: Theme.of(context).colorScheme.primary,
-                              barWidth: 2,
-                              dotData: FlDotData(show: _showDots),
+                              barWidth: 3,
+                              dotData: FlDotData(
+                                show: _showDots,
+                                getDotPainter: (spot, percent, barData, index) => 
+                                  FlDotCirclePainter(
+                                    strokeWidth: 2,
+                                    strokeColor: Colors.white,
+                                  ),
+                              ),
                               belowBarData: BarAreaData(
                                 show: _showArea,
-                                color: Theme.of(context).colorScheme.primary
-                                  .withOpacity(0.2),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
                               ),
                             ),
                           ],
                         ),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
                       )
                     : Center(
                         child: Column(
