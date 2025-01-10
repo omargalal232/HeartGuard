@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'views/screens/login_screen.dart';
-import 'views/screens/signup_screen.dart';
-import 'views/screens/home_screen.dart';
-import 'views/screens/profile_screen.dart';
-import 'views/screens/websocket_screen.dart';
+import 'services/user_service.dart';
+import 'models/user_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,16 +17,29 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Firebase App',
       theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignupScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/profile': (context) => const ProfileScreen(),
-        '/websocket': (context) => const WebSocketScreen(),
-      },
+      home: UserManagementScreen(),
+    );
+  }
+}
+
+class UserManagementScreen extends StatelessWidget {
+  final UserService userService = UserService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('User Management')),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () async {
+            // Example: Create a new user
+            UserModel newUser = UserModel(id: '1', name: 'John Doe', email: 'john@example.com');
+            await userService.createUser(newUser);
+            print('User created');
+          },
+          child: Text('Create User'),
+        ),
+      ),
     );
   }
 }

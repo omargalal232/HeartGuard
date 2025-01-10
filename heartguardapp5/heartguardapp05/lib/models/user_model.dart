@@ -1,32 +1,27 @@
 /// Model class representing a user in the application
 class UserModel {
-  final String uid;
-  final String email;
-  final String? name;
-  final bool isActive;
+  String id;
+  String name;
+  String email;
 
-  const UserModel({
-    required this.uid,
-    required this.email,
-    this.name,
-    this.isActive = false,
-  });
+  UserModel({required this.id, required this.name, required this.email});
 
-  factory UserModel.fromMap(Map<String, dynamic> map) {
-    return UserModel(
-      uid: map['uid']?.toString() ?? '',
-      email: map['email']?.toString() ?? '',
-      name: map['name']?.toString(),
-      isActive: map['isActive'] == true,
-    );
-  }
-
+  // Convert a UserModel into a Map. The keys must correspond to the
+  // names of the fields in Firestore.
   Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'email': email,
+      'id': id,
       'name': name,
-      'isActive': isActive,
+      'email': email,
     };
+  }
+
+  // Extract a UserModel from a Map.
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'],
+      name: map['name'],
+      email: map['email'],
+    );
   }
 } 
