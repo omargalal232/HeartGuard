@@ -25,6 +25,8 @@ class MyApp extends StatelessWidget {
 class UserManagementScreen extends StatelessWidget {
   final UserService userService = UserService();
 
+  UserManagementScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,10 +34,11 @@ class UserManagementScreen extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () async {
-            // Example: Create a new user
-            UserModel newUser = UserModel(id: '1', name: 'John Doe', email: 'john@example.com');
+            // Example: Create a new user with a unique ID
+            String userId = DateTime.now().millisecondsSinceEpoch.toString(); // Generate a unique ID
+            UserModel newUser = UserModel(id: userId, name: 'Ahmed', email: 'Ahmed@example.com');
             await userService.createUser(newUser);
-            print('User created');
+            print('User created with ID: $userId');
           },
           child: Text('Create User'),
         ),

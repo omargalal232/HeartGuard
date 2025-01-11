@@ -15,9 +15,10 @@ class AuthController {
       final User? user = await _authService.signInWithEmail(email, password);
       if (user != null) {
         return UserModel(
-          uid: user.uid,
+          id: user.uid,
           email: user.email!,
-          name: user.displayName,
+          name: user.displayName ?? 'No Name',
+          isActive: true,
         );
       }
       return null;
@@ -37,9 +38,10 @@ class AuthController {
       final User? user = await _authService.signUpWithEmail(email, password);
       if (user != null) {
         return UserModel(
-          uid: user.uid,
+          id: user.uid,
           email: user.email!,
-          name: user.displayName,
+          name: user.displayName ?? 'No Name',
+          isActive: true,
         );
       }
       return null;
