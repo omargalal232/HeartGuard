@@ -48,7 +48,14 @@ dependencies:
   flutter_riverpod: ^2.5.1
   sqflite: ^2.3.2
   path: ^1.8.3
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.3.5
+  http: ^1.2.2
+  heart_bpm: ^2.0.0+0
+  flutter_local_notifications: ^18.0.1
+  local_auth: ^2.3.0
+  mqtt_client: ^10.5.1
+  provider: ^6.1.2
+  url_launcher: ^6.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
