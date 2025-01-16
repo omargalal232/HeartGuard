@@ -1,56 +1,38 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/emergency_contact.dart';
 
 class EmergencyProvider with ChangeNotifier {
-  final _firestore = FirebaseFirestore.instance;
-  List<EmergencyContact> _contacts = [];
-  bool _isEmergencyMode = false;
+  final List<String> _emergencyContacts = [];
 
-  List<EmergencyContact> get contacts => _contacts;
-  bool get isEmergencyMode => _isEmergencyMode;
+  // Getter for emergency contacts
+  List<String> get emergencyContacts => List.unmodifiable(_emergencyContacts);
 
-  Future<void> loadContacts(String userId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('emergency_contacts')
-          .get();
-
-      _contacts = snapshot.docs
-          .map((doc) => EmergencyContact.fromMap(doc.data()))
-          .toList();
+  // Add a contact
+  void addContact(String contact) {
+    if (!_emergencyContacts.contains(contact)) {
+      _emergencyContacts.add(contact);
       notifyListeners();
-    } catch (e) {
-      print('Error loading emergency contacts: $e');
     }
   }
 
-  Future<void> addContact(String userId, EmergencyContact contact) async {
-    try {
-      final docRef = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('emergency_contacts')
-          .add(contact.toMap());
-
-      contact.id = docRef.id;
-      _contacts.add(contact);
+  // Update a contact
+  void updateContact(String oldContact, String newContact) {
+    final index = _emergencyContacts.indexOf(oldContact);
+    if (index != -1) {
+      _emergencyContacts[index] = newContact;
       notifyListeners();
-    } catch (e) {
-      print('Error adding emergency contact: $e');
     }
   }
 
-  void triggerEmergencyMode() {
-    _isEmergencyMode = true;
-    notifyListeners();
-    // Implement emergency notification logic here
+  // Remove a contact
+  void removeContact(String contact) {
+    if (_emergencyContacts.remove(contact)) {
+      notifyListeners();
+    }
   }
 
-  void cancelEmergencyMode() {
-    _isEmergencyMode = false;
+  // Clear all contacts
+  void clearContacts() {
+    _emergencyContacts.clear();
     notifyListeners();
   }
 } 

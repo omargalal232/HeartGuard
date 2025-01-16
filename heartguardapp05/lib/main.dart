@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'views/screens/login_screen.dart';
-import 'views/screens/signup_screen.dart';
-import 'views/screens/home_screen.dart';
-import 'views/screens/monitoring_screen.dart';
-import 'views/screens/analysis_screen.dart';
-import 'views/screens/profile_screen.dart';
-import 'views/screens/emergency_screen.dart';
+import 'services/user_service.dart';
+import 'models/user_model.dart';
 import 'providers/emergency_provider.dart';
+import 'views/screens/login_screen.dart';
+import 'views/screens/emergency_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,22 +20,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<EmergencyProvider>(create: (_) => EmergencyProvider()),
+        ChangeNotifierProvider(create: (_) => EmergencyProvider()),
       ],
       child: MaterialApp(
-        title: 'Heart Monitor',
+        title: 'HeartGuard App',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
-          useMaterial3: true,
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        initialRoute: '/login',
+        home: const LoginScreen(),
         routes: {
-          '/login': (context) => const LoginScreen(),
-          '/signup': (context) => const SignupScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/monitoring': (context) => const MonitoringScreen(),
-          '/analysis': (context) => const AnalysisScreen(),
-          '/profile': (context) => const ProfileScreen(),
           '/emergency': (context) => const EmergencyScreen(),
         },
       ),
