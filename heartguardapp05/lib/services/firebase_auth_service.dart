@@ -19,7 +19,10 @@ class FirebaseAuthService {
       );
       return result.user;
     } catch (e) {
+<<<<<<< Updated upstream:heartguardapp05/lib/services/firebase_auth_service.dart
       print('Error signing in: $e');
+=======
+>>>>>>> Stashed changes:heartguardapp5/heartguardapp05/lib/services/firebase_auth_service.dart
       rethrow;
     }
   }
@@ -33,13 +36,24 @@ class FirebaseAuthService {
       );
       return result.user;
     } catch (e) {
+<<<<<<< Updated upstream:heartguardapp05/lib/services/firebase_auth_service.dart
       print('Error signing up: $e');
+=======
+>>>>>>> Stashed changes:heartguardapp5/heartguardapp05/lib/services/firebase_auth_service.dart
       rethrow;
     }
   }
 
   /// Signs out the current user
   Future<void> signOut() async {
+<<<<<<< Updated upstream:heartguardapp05/lib/services/firebase_auth_service.dart
     await _auth.signOut();
+=======
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      rethrow;
+    }
+>>>>>>> Stashed changes:heartguardapp5/heartguardapp05/lib/services/firebase_auth_service.dart
   }
 }
