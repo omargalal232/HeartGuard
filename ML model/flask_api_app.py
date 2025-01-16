@@ -2,11 +2,9 @@ import joblib
 import numpy as np
 import librosa
 import os
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.svm import SVC
-from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
-from imblearn.over_sampling import SMOTE
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
 
 # Function to preprocess audio and extract MFCC features
 def preprocess_audio(file_path):
@@ -64,31 +62,28 @@ def predict_abnormality(file_path):
     else:
         return "Abnormal"
 
-# Function to process all audio files in a directory
-def process_all_audio_files(directory_path):
-    # Check if the directory exists
-    if not os.path.exists(directory_path):
-        print(f"Error: Directory {directory_path} does not exist.")
-        return
-    
-    files = [filename for filename in os.listdir(directory_path) if filename.endswith(".mp3")]
-    
-    if not files:
-        print("No MP3 files found in the directory.")
-        return
+# Flask route to handle file uploads and predictions
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
 
-    for filename in files:
-        print(f"Processing file: {filename}")
-        file_path = os.path.join(directory_path, filename)
-        result = predict_abnormality(file_path)
-        if result:
-            print(f"File: {filename}, Heart sound is: {result}")
+    # Save the uploaded file temporarily
+    file_path = os.path.join(os.path.dirname(__file__), file.filename)
+    file.save(file_path)
 
-# Main block to process audio files
+    # Predict the abnormality
+    result = predict_abnormality(file_path)
+
+    # Return the result as a JSON response
+    if result:
+        return jsonify({"result": result}), 200
+    else:
+        return jsonify({"error": "Prediction failed"}), 500
+
 if __name__ == "__main__":
-    # Specify the relative path to the directory containing the audio files
-    directory_path = "ML model/raw/demo sounds"
-
-    # Process all audio files in the directory
-    process_all_audio_files(directory_path)
-
+    # Run the Flask app
+    app.run(debug=True)
