@@ -23,11 +23,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<EmergencyProvider>(create: (_) => EmergencyProvider()),
+        ChangeNotifierProvider<EmergencyProvider>(
+            create: (_) => EmergencyProvider()),
       ],
       child: MaterialApp(
         title: 'Heart Monitor',
-        debugShowCheckedModeBanner: false, 
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
           useMaterial3: true,
