@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'monitoring_screen.dart';
-import 'analysis_screen.dart';
 import 'profile_screen.dart';
 import 'emergency_screen.dart';
+import 'history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,72 +12,48 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
-  final PageController _pageController = PageController();
+  int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const MonitoringScreen(),
-    const AnalysisScreen(),
-    const ProfileScreen(),
-    const EmergencyScreen(),
+  static const List<Widget> _screens = [
+    MonitoringScreen(),
+    HistoryScreen(),
+    EmergencyScreen(),
+    ProfileScreen(),
   ];
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onTabTapped(int index) {
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void _onPageChanged(int index) {
+  void _onItemTapped(int index) {
     setState(() {
-      _currentIndex = index;
+      _selectedIndex = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: _screens,
-      ),
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        items: const [
+        items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_heart_outlined),
-            activeIcon: Icon(Icons.monitor_heart),
+            icon: Icon(Icons.monitor_heart),
             label: 'Monitor',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics_outlined),
-            activeIcon: Icon(Icons.analytics),
-            label: 'Analysis',
+            icon: Icon(Icons.history),
+            label: 'History',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emergency_outlined),
-            activeIcon: Icon(Icons.emergency),
+            icon: Icon(Icons.emergency),
             label: 'Emergency',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        type: BottomNavigationBarType.fixed,
+        onTap: _onItemTapped,
       ),
     );
   }
