@@ -9,10 +9,13 @@ import 'views/screens/analysis_screen.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/emergency_screen.dart';
 import 'providers/emergency_provider.dart';
+import 'firebase_options.dart'; // Import the generated firebase_options.dart
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // Pass the generated options here
+  );
   runApp(const MyApp());
 }
 
@@ -23,8 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<EmergencyProvider>(
-            create: (_) => EmergencyProvider()),
+        ChangeNotifierProvider<EmergencyProvider>(create: (_) => EmergencyProvider()),
       ],
       child: MaterialApp(
         title: 'Heart Monitor',
