@@ -3,11 +3,45 @@ import 'package:firebase_database/firebase_database.dart';
 class RealtimeDatabaseService {
   final FirebaseDatabase _database = FirebaseDatabase.instance;
 
+  // Get user's profile data
+  Future<DataSnapshot> getUserProfile(String userId) async {
+    try {
+      final DatabaseReference userProfileRef = _database.ref('users/$userId/profile');
+      return await userProfileRef.get();
+    } catch (e) {
+      throw Exception('Failed to get user profile: $e');
+    }
+  }
+
+  // Update user's profile
+  Future<void> updateUserProfile(String userId, Map<String, dynamic> profileData) async {
+    try {
+      final DatabaseReference userProfileRef = _database.ref('users/$userId/profile');
+      profileData['updatedAt'] = ServerValue.timestamp;
+      await userProfileRef.update(profileData);
+    } catch (e) {
+      throw Exception('Failed to update user profile: $e');
+    }
+  }
+
+  // Get user's heart rate data
+  Future<DataSnapshot> getHeartRateData(String userId) async {
+    try {
+      final DatabaseReference heartRateRef = _database.ref('users/$userId/heartRate/latest');
+      return await heartRateRef.get();
+    } catch (e) {
+      throw Exception('Failed to get heart rate data: $e');
+    }
+  }
+
   // Save user's heart rate data
   Future<void> saveHeartRateData(String userId, Map<String, dynamic> heartRateData) async {
     try {
       final DatabaseReference userHeartRateRef = _database.ref('users/$userId/heartRate');
-      await userHeartRateRef.push().set(heartRateData);
+      // Save to history
+      await userHeartRateRef.child('history').push().set(heartRateData);
+      // Update latest
+      await userHeartRateRef.child('latest').set(heartRateData);
     } catch (e) {
       throw Exception('Failed to save heart rate data: $e');
     }
@@ -16,7 +50,7 @@ class RealtimeDatabaseService {
   // Get user's heart rate history
   Stream<DatabaseEvent> getHeartRateHistory(String userId) {
     try {
-      final DatabaseReference userHeartRateRef = _database.ref('users/$userId/heartRate');
+      final DatabaseReference userHeartRateRef = _database.ref('users/$userId/heartRate/history');
       return userHeartRateRef.orderByChild('timestamp').limitToLast(100).onValue;
     } catch (e) {
       throw Exception('Failed to get heart rate history: $e');
