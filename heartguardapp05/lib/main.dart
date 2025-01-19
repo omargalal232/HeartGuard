@@ -6,6 +6,7 @@ import 'views/screens/home_screen.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/monitoring_screen.dart';
 import 'views/screens/notification_screen.dart';
+import 'firebase_options.dart';
 
 void main() {
   runApp(const MyApp());
@@ -55,9 +56,11 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
     try {
       // Initialize Flutter Bindings
       WidgetsFlutterBinding.ensureInitialized();
-      
+
       // Initialize Firebase
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
 
       // Request notification permissions
       final messaging = FirebaseMessaging.instance;
