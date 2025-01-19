@@ -1,33 +1,30 @@
 class EmergencyContact {
-  String? id;
+  final String? id;
   final String name;
   final String phone;
-  final String relationship;
-  final bool isPrimary;
+  final String relation;
 
   EmergencyContact({
     this.id,
     required this.name,
     required this.phone,
-    required this.relationship,
-    this.isPrimary = false,
+    required this.relation,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'phone': phone,
-      'relationship': relationship,
-      'isPrimary': isPrimary,
+      'relation': relation,
     };
   }
 
-  factory EmergencyContact.fromMap(Map<String, dynamic> map) {
+  factory EmergencyContact.fromMap(Map<String, dynamic> map, String id) {
     return EmergencyContact(
+      id: id,
       name: map['name'] ?? '',
       phone: map['phone'] ?? '',
-      relationship: map['relationship'] ?? '',
-      isPrimary: map['isPrimary'] ?? false,
+      relation: map['relation'] ?? '',
     );
   }
 } 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:async';
+import '../../controllers/profile_controller.dart';
+import '../../models/profile_model.dart';
+import 'emergency_contact_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,158 +13,95 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
-  
-  String? _email;
-  String? _name;
-  String? _uid;
+  final ProfileController _profileController = ProfileController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   bool _isLoading = true;
-  StreamSubscription<DocumentSnapshot>? _profileSubscription;
+  String? _error;
+  ProfileModel? _profile;
 
   @override
   void initState() {
     super.initState();
-    _setupProfileStream();
+    _loadProfile();
   }
 
   @override
   void dispose() {
-    _profileSubscription?.cancel();
+    _nameController.dispose();
     super.dispose();
   }
 
-  void _setupProfileStream() {
-    final user = _auth.currentUser;
-    if (user == null) {
-      setState(() {
-        _isLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _uid = user.uid;
-    });
-
-    // Set up real-time listener for profile changes
-    _profileSubscription = _firestore
-        .collection('profiles')
-        .doc(user.uid)
-        .snapshots()
-        .listen(
-      (snapshot) {
-        if (!mounted) return;
-        
-        if (snapshot.exists) {
-          final data = snapshot.data();
-          if (data != null) {
-            setState(() {
-              _email = data['email']?.toString();
-              _name = data['name']?.toString();
-              _isLoading = false;
-            });
-          }
-        } else {
-          // If document doesn't exist, create it with email from Firebase Auth
-          _firestore.collection('profiles').doc(user.uid).set({
-            'email': user.email,
-            'name': user.displayName ?? 'User',
-          }).then((_) {
-            if (!mounted) return;
-            setState(() {
-              _email = user.email;
-              _name = user.displayName ?? 'User';
-              _isLoading = false;
-            });
-          }).catchError((error) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error creating profile: ${error.toString()}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            setState(() {
-              _isLoading = false;
-            });
-          });
-        }
-      },
-      onError: (error) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading profile: ${error.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await _profileController.getCurrentProfile();
+      if (mounted) {
         setState(() {
+          _profile = profile;
+          if (profile?.name != null) {
+            _nameController.text = profile!.name!;
+          }
           _isLoading = false;
         });
-      },
-    );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
-  Widget _buildProfileItem(String label, String? value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey[600], size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value ?? 'Not available',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      final updatedProfile = ProfileModel(
+        uid: user.uid,
+        email: user.email!,
+        name: _nameController.text.trim(),
+        lastActive: DateTime.now(),
+      );
+
+      await _profileController.updateProfile(updatedProfile);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _signOut() async {
     try {
-      // Cancel the subscription before signing out
-      await _profileSubscription?.cancel();
-      _profileSubscription = null;
-      
-      await _auth.signOut();
-      
-      if (!mounted) return;
-      
-      // Use pushNamedAndRemoveUntil to clear the navigation stack
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,  // Remove all previous routes
-      );
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error signing out: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e')),
+        );
+      }
     }
   }
 
@@ -171,52 +110,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _signOut,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Section
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Profile Information',
-                            style: Theme.of(context).textTheme.titleLarge,
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Error: $_error'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadProfile,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CircleAvatar(
+                          radius: 50,
+                          child: Icon(Icons.person, size: 50),
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            border: OutlineInputBorder(),
                           ),
-                          const SizedBox(height: 16),
-                          _buildProfileItem('Email', _email, Icons.email),
-                          _buildProfileItem('Name', _name, Icons.person),
-                          _buildProfileItem('UID', _uid, Icons.fingerprint),
-                        ],
-                      ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Email: ${_profile?.email ?? 'Not available'}',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _updateProfile,
+                            child: _isLoading
+                                ? const CircularProgressIndicator()
+                                : const Text('Update Profile'),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.emergency, color: Colors.red),
+                            title: const Text('Emergency Contacts'),
+                            subtitle: const Text('Manage your emergency contacts'),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const EmergencyContactScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Sign Out Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _signOut,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text('Sign Out'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 } 

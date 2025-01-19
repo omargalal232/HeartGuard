@@ -8,7 +8,9 @@ import 'views/screens/monitoring_screen.dart';
 import 'views/screens/notification_screen.dart';
 import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
