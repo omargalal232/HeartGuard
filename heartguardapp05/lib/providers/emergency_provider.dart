@@ -19,7 +19,7 @@ class EmergencyProvider with ChangeNotifier {
           .get();
 
       _contacts = snapshot.docs
-          .map((doc) => EmergencyContact.fromMap(doc.data()))
+          .map((doc) => EmergencyContact.fromMap(doc.data(), doc.id))
           .toList();
       notifyListeners();
     } catch (e) {
@@ -53,4 +53,4 @@ class EmergencyProvider with ChangeNotifier {
     _isEmergencyMode = false;
     notifyListeners();
   }
-} 
+}
