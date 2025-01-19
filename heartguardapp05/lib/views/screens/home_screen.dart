@@ -14,11 +14,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
-    MonitoringScreen(),
-    HistoryScreen(),
-    NotificationScreen(),
-    ProfileScreen(),
+  final List<Widget> _screens = [
+    const MonitoringScreen(),
+    const NotificationScreen(),
+    const HistoryScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -32,28 +32,29 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.red,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.monitor_heart),
             label: 'Monitor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
             label: 'Notifications',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        type: BottomNavigationBarType.fixed,
-        onTap: _onItemTapped,
       ),
     );
   }

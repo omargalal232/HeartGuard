@@ -7,7 +7,9 @@ import 'views/screens/profile_screen.dart';
 import 'views/screens/monitoring_screen.dart';
 import 'views/screens/notification_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
