@@ -3,6 +3,7 @@ import 'monitoring_screen.dart';
 import 'profile_screen.dart';
 import 'notification_screen.dart';
 import 'history_screen.dart';
+import 'file_upload_screen.dart'; // Add the import for the FileUploadScreen.
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,12 +20,20 @@ class _HomeScreenState extends State<HomeScreen> {
     const NotificationScreen(),
     const HistoryScreen(),
     const ProfileScreen(),
+    const FileUploadScreen(), // Add the FileUploadScreen to the list.
   ];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    if (index == 4) {
+      // Redirect to the file upload screen when the heart sound icon is tapped.
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const FileUploadScreen()),
+      );
+    }
   }
 
   @override
@@ -54,8 +63,12 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.speaker),
+            label: 'Heart Sound',
+          ),
         ],
       ),
     );
   }
-} 
+}
