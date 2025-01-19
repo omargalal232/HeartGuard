@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'views/screens/login_screen.dart';
+import 'views/screens/signup_screen.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/monitoring_screen.dart';
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/monitoring': (context) => const MonitoringScreen(),
         '/notifications': (context) => const NotificationScreen(),
+        '/signup': (context) => const SignupScreen(),
       },
     );
   }

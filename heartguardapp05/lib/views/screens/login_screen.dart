@@ -2,10 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
 class LoginScreen extends StatefulWidget {
   final String? error;
-  
+
   const LoginScreen({
     super.key,
     this.error,
@@ -15,17 +14,18 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _auth = FirebaseAuth.instance;
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.initState();
     _setupAnimations();
     _setupFormValidation();
-    
+
     if (widget.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showError(widget.error!);
@@ -50,14 +50,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeIn,
       ),
     );
-    
+
     _animationController.forward();
   }
 
@@ -89,10 +89,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   void _validateForm() {
-    final isEmailValid = _emailController.text.isNotEmpty && 
+    final isEmailValid = _emailController.text.isNotEmpty &&
         _validateEmail(_emailController.text);
     final isPasswordValid = _passwordController.text.length >= 6;
-    
+
     setState(() {
       _isFormValid = isEmailValid && isPasswordValid;
     });
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       if (mounted) {
         // Clear any existing error messages
         ScaffoldMessenger.of(context).clearSnackBars();
-        
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
           ),
         );
-        
+
         // Navigate to home screen with fade transition
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
@@ -177,11 +177,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           message = e.message ?? 'An error occurred during sign in.';
       }
       _showError(message);
-      
+
       // Clear password on authentication error
       _passwordController.clear();
       _validateForm();
-      
+
       // Focus password field for better UX
       _passwordFocusNode.requestFocus();
     } catch (e) {
@@ -198,11 +198,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _showError(String message) {
     // Clear any existing snackbars
     ScaffoldMessenger.of(context).clearSnackBars();
-    
+
     setState(() {
       _errorMessage = message;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -278,7 +278,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         prefixIcon: const Icon(Icons.lock_outlined),
         suffixIcon: IconButton(
           icon: Icon(
-            _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            _obscurePassword
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             color: Theme.of(context).colorScheme.primary,
           ),
           onPressed: () {
@@ -384,7 +386,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       const SizedBox(height: 16),
                       Text(
                         'Heart Monitor',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           shadows: [
@@ -430,10 +435,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           children: [
                             Text(
                               'Welcome Back',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
@@ -446,8 +455,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ElevatedButton(
                               onPressed: _isLoading ? null : _signIn,
                               style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -460,7 +471,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       width: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
                                       ),
                                     )
                                   : const Text(
@@ -481,14 +494,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                   // Sign Up Link
                   TextButton(
-                    onPressed: _isLoading 
-                        ? null 
+                    onPressed: _isLoading
+                        ? null
                         : () {
                             Navigator.pushNamed(context, '/signup');
                           },
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     child: const Text(
                       'Don\'t have an account? Sign Up',
@@ -513,4 +527,4 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ),
     );
   }
-} 
+}
