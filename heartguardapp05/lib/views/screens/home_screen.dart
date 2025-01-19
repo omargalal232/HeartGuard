@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'monitoring_screen.dart';
 import 'profile_screen.dart';
-import 'emergency_screen.dart';
+import 'notification_screen.dart';
 import 'history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const List<Widget> _screens = [
     MonitoringScreen(),
     HistoryScreen(),
-    EmergencyScreen(),
+    NotificationScreen(),
     ProfileScreen(),
   ];
 
@@ -42,8 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'History',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.emergency),
-            label: 'Emergency',
+            icon: Icon(Icons.notifications),
+            label: 'Notifications',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

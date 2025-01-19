@@ -4,7 +4,7 @@ import 'views/screens/login_screen.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/monitoring_screen.dart';
-import 'views/screens/emergency_screen.dart';
+import 'views/screens/notification_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/monitoring': (context) => const MonitoringScreen(),
-        '/emergency': (context) => const EmergencyScreen(),
+        '/notifications': (context) => const NotificationScreen(),
       },
     );
   }
