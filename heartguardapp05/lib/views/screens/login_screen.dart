@@ -377,8 +377,8 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ],
                           ),
-                          child: Image.network(
-                            'https://cdn-icons-png.flaticon.com/512/1818/1818145.png',
+                          child: Image.asset(
+                            'assets/img/123.png',
                             fit: BoxFit.contain,
                           ),
                         ),
