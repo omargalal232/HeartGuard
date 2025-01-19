@@ -38,3 +38,81 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+class InitializationWrapper extends StatefulWidget {
+  const InitializationWrapper({super.key});
+
+  @override
+  State<InitializationWrapper> createState() => _InitializationWrapperState();
+}
+
+class _InitializationWrapperState extends State<InitializationWrapper> {
+  bool _initialized = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      // Initialize Flutter Bindings
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Initialize Firebase
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      // Request notification permissions
+      final messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      setState(() {
+        _initialized = true;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Error initializing app: $_error'),
+          ),
+        ),
+      );
+    }
+
+    if (!_initialized) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Initializing...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const LoginScreen();
+  }
+}
