@@ -77,10 +77,11 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       appBar: AppBar(
         title: _selectedIndex == 4
             ? const Text('Upload Heart Sound')
-            : const Text(''),
+            : const Text('Upload Heart Sound'),
       ),
       body: _selectedIndex == 4
-          ? Padding(
+        ?  Center(
+          child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -88,21 +89,22 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
                   Text(
                     _statusMessage,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 26),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 26),
                   ElevatedButton(
                     onPressed: _pickFile,
                     child: const Text('Pick File'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 26),
                   ElevatedButton(
                     onPressed: _uploadFile,
                     child: const Text('Upload File'),
                   ),
                 ],
               ),
-            )
+            ),
+          )
           : _screens[_selectedIndex], // Display the selected screen
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
