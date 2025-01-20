@@ -63,15 +63,12 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
 
   Future<void> _initializeApp() async {
     try {
-      // Initialize Flutter Bindings
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Initialize Firebase
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
 
-      // Request notification permissions
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission(
         alert: true,
