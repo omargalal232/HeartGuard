@@ -19,7 +19,7 @@ class EmergencyProvider with ChangeNotifier {
           .get();
 
       _contacts = snapshot.docs
-          .map((doc) => EmergencyContact.fromMap(doc.data()))
+          .map((doc) => EmergencyContact.fromMap(doc.data(), doc.id))
           .toList();
       notifyListeners();
     } catch (e) {
@@ -35,8 +35,8 @@ class EmergencyProvider with ChangeNotifier {
           .collection('emergency_contacts')
           .add(contact.toMap());
 
-      contact.id = docRef.id;
-      _contacts.add(contact);
+      final updatedContact = EmergencyContact.fromMap(contact.toMap(), docRef.id);
+      _contacts.add(updatedContact);
       notifyListeners();
     } catch (e) {
       print('Error adding emergency contact: $e');

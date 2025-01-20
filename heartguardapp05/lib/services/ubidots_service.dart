@@ -9,9 +9,9 @@ class UbidotsService {
   final _client = http.Client();
   bool _isDisposed = false;
   
-  // Base URL for Ubidots dashboard
+ 
   static const String _dashboardBaseUrl = 'https://industrial.ubidots.com/app/dashboards/public/dashboard/aC9mz3U8pQz5xzJOyQQnq4-h2KHrMT7e5sTgM_wFPUE?navbar=true&contextbar=false';
-  // Replace this with your actual dashboard ID
+  
   static const String _dashboardId = 'YOUR_DASHBOARD_ID';
 
   UbidotsService({
