@@ -1,0 +1,14 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy all application files, including models
+COPY . .
+
+# Ensure the temporary directory is created
+RUN mkdir -p temp
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

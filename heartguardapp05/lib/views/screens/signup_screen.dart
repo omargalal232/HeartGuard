@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import '/models/profile_model.dart'; // Adjust the import path as necessary
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,7 +16,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
-  
+  final _firestore = FirebaseFirestore.instance; // Firestore instance
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -60,6 +62,22 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (mounted && userCredential.user != null) {
+        // Create a new profile model
+        final profile = ProfileModel(
+          uid: userCredential.user!.uid,
+          email: email,
+          name: null, // You can add a name field in your form if needed
+          photoUrl:
+              null, // You can add a photo URL field in your form if needed
+          lastActive: DateTime.now(),
+        );
+
+        // Save the profile to Firestore
+        await _firestore
+            .collection('profiles')
+            .doc(profile.uid)
+            .set(profile.toMap());
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -154,8 +172,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ],
                     ),
-                    child: Image.network(
-                      'https://cdn-icons-png.flaticon.com/512/1818/1818145.png',
+                    child: Image.asset(
+                      'assets/img/123.png',
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -164,9 +182,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(
                   'Create Account',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const SizedBox(height: 40),
 
@@ -259,7 +277,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword;
                                   });
                                 },
                               ),
@@ -284,7 +303,8 @@ class _SignupScreenState extends State<SignupScreen> {
                             onPressed: _isLoading ? null : _signUp,
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -296,7 +316,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
                                     ),
                                   )
                                 : const Text(
@@ -337,4 +358,4 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-} 
+}

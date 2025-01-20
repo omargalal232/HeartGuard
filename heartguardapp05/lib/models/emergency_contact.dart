@@ -1,5 +1,5 @@
 class EmergencyContact {
-  final String? id;
+  String? id;
   final String name;
   final String phone;
   final String relation;
@@ -27,4 +27,4 @@ class EmergencyContact {
       relation: map['relation'] ?? '',
     );
   }
-} 
+}

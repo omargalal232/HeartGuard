@@ -53,4 +53,4 @@ class EmergencyProvider with ChangeNotifier {
     _isEmergencyMode = false;
     notifyListeners();
   }
-} 
+}

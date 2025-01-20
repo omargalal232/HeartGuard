@@ -3,6 +3,7 @@ import 'monitoring_screen.dart';
 import 'profile_screen.dart';
 import 'notification_screen.dart';
 import 'history_screen.dart';
+import 'file_upload_screen.dart'; // Add the import for the FileUploadScreen.
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const MonitoringScreen(),
     const NotificationScreen(),
     const HistoryScreen(),
+    const FileUploadScreen(),
     const ProfileScreen(),
   ];
 
@@ -51,6 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'History',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Heart Sound',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
@@ -58,4 +64,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-} 
+}
