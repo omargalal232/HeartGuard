@@ -180,12 +180,17 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        Text(
-                          'Create Account',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        Center(
+                          child: Text(
+                            'Create Account',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
                         ),
                         const SizedBox(height: 40),
                         Card(
@@ -206,7 +211,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                     textInputAction: TextInputAction.next,
                                     decoration: InputDecoration(
                                       labelText: 'Email',
-                                      prefixIcon: const Icon(Icons.email_outlined),
+                                      prefixIcon:
+                                          const Icon(Icons.email_outlined),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -228,7 +234,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                     textInputAction: TextInputAction.next,
                                     decoration: InputDecoration(
                                       labelText: 'Password',
-                                      prefixIcon: const Icon(Icons.lock_outlined),
+                                      prefixIcon:
+                                          const Icon(Icons.lock_outlined),
                                       suffixIcon: IconButton(
                                         icon: Icon(
                                           _obscurePassword
@@ -237,7 +244,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                         ),
                                         onPressed: () {
                                           setState(() {
-                                            _obscurePassword = !_obscurePassword;
+                                            _obscurePassword =
+                                                !_obscurePassword;
                                           });
                                         },
                                       ),
@@ -262,7 +270,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                     textInputAction: TextInputAction.done,
                                     decoration: InputDecoration(
                                       labelText: 'Confirm Password',
-                                      prefixIcon: const Icon(Icons.lock_outlined),
+                                      prefixIcon:
+                                          const Icon(Icons.lock_outlined),
                                       suffixIcon: IconButton(
                                         icon: Icon(
                                           _obscureConfirmPassword
@@ -294,7 +303,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ElevatedButton(
                                     onPressed: _isLoading ? null : _signUp,
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
                                       backgroundColor:
                                           Theme.of(context).colorScheme.primary,
                                       foregroundColor: Colors.white,
@@ -308,8 +318,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                             width: 20,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
                                             ),
                                           )
                                         : const Text(
@@ -329,8 +340,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         TextButton(
                           onPressed: _isLoading
                               ? null
-                              : () =>
-                                  Navigator.pushReplacementNamed(context, '/login'),
+                              : () => Navigator.pushReplacementNamed(
+                                  context, '/login'),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.white,
                           ),
