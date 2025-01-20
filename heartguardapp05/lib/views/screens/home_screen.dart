@@ -19,21 +19,14 @@ class _HomeScreenState extends State<HomeScreen> {
     const MonitoringScreen(),
     const NotificationScreen(),
     const HistoryScreen(),
+    const FileUploadScreen(),
     const ProfileScreen(),
-    const FileUploadScreen(), // Add the FileUploadScreen to the list.
   ];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 4) {
-      // Redirect to the file upload screen when the heart sound icon is tapped.
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const FileUploadScreen()),
-      );
-    }
   }
 
   @override
@@ -60,12 +53,12 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'History',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.favorite),
+            label: 'Heart Sound',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.speaker),
-            label: 'Heart Sound',
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
