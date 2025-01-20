@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/profile_controller.dart';
 import '../../models/profile_model.dart';
 import 'emergency_contact_screen.dart';

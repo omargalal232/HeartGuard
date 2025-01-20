@@ -3,7 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../controllers/file_upload_controller.dart'; // Adjust this path based on your project structure.
 
 class FileUploadScreen extends StatefulWidget {
-  const FileUploadScreen({Key? key}) : super(key: key);
+  const FileUploadScreen({super.key});
 
   @override
   State createState() => _FileUploadScreenState();
