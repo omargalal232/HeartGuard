@@ -49,34 +49,35 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       });
     }
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upload Heart Sound'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _statusMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _pickFile,
-              child: const Text('Pick File'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _uploadFile,
-              child: const Text('Upload File'),
-            ),
-          ],
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _statusMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _pickFile,
+                child: const Text('Pick File'),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _uploadFile,
+                child: const Text('Upload File'),
+              ),
+            ],
+          ),
         ),
       ),
     );
