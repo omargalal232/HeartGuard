@@ -14,12 +14,15 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
   String _statusMessage = "No file uploaded yet.";
   String? _filePath;
 
+  // Function to pick an audio file
   void _pickFile() async {
+    // Open the file picker dialog
     final result = await FilePicker.platform.pickFiles(
       type: FileType.audio,
       allowedExtensions: ['mp3'], // Only allow .mp3 files
     );
 
+    // Check if a file was selected
     if (result != null && result.files.single.path != null) {
       setState(() {
         _filePath = result.files.single.path!;
@@ -32,12 +35,14 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
     }
   }
 
+  // Function to upload the selected file
   void _uploadFile() async {
     if (_filePath != null) {
       setState(() {
         _statusMessage = "Uploading file...";
       });
 
+      // Call the upload function from the controller
       final response = await _controller.uploadFile(_filePath!);
 
       setState(() {
@@ -69,12 +74,12 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _pickFile,
+                onPressed: _pickFile, // Trigger file picker
                 child: const Text('Pick File'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _uploadFile,
+                onPressed: _uploadFile, // Trigger file upload
                 child: const Text('Upload File'),
               ),
             ],
