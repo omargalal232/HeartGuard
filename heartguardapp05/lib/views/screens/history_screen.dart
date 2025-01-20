@@ -32,10 +32,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     try {
-      final user = _auth.currentUser;
+      final user = _auth.currentUser ;
       if (user == null) {
         setState(() {
-          _error = 'User not authenticated';
+          _error = 'User  not authenticated';
           _isLoading = false;
         });
         return;
@@ -64,6 +64,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           'id': doc.id,
           'heartRate': data['heartRate'] ?? 0,
           'timestamp': data['timestamp'] as Timestamp,
+          'favorite': data['favorite'] ?? false,
         };
       }).toList();
 
@@ -79,6 +80,42 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _deleteRecord(String id) async {
+    try {
+      await _firestore.collection('heartRateData').doc(id).delete();
+      _loadHeartRateHistory();
+    } catch (e) {
+      print('Error deleting record: $e');
+      setState(() {
+        _error = 'Failed to delete record';
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite(String id, bool isFavorite) async {
+    try {
+      await _firestore.collection('heartRateData').doc(id).update({
+        'favorite': !isFavorite,
+      });
+      _loadHeartRateHistory();
+    } catch (e) {
+      print('Error toggling favorite: $e');
+      setState(() {
+        _error = 'Failed to toggle favorite';
+      });
+    }
+  }
+
+  void _sortRecords(String sortBy) {
+    setState(() {
+      if (sortBy == 'heartRate') {
+        _heartRateHistory.sort((a, b) => a['heartRate'].compareTo(b['heartRate']));
+      } else if (sortBy == 'timestamp') {
+        _heartRateHistory.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
+      }
+    });
   }
 
   String _formatDateTime(Timestamp timestamp) {
@@ -119,6 +156,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: const Text('Heart Rate History'),
         centerTitle: true,
         actions: [
+          PopupMenuButton<String>(
+            onSelected: _sortRecords,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'heartRate',
+                child: Text('Sort by Heart Rate'),
+              ),
+              const PopupMenuItem(
+                value: 'timestamp',
+                child: Text('Sort by Timestamp'),
+              ),
+            ],
+            icon: const Icon(Icons.sort),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadHeartRateHistory,
@@ -143,9 +194,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
-                              leading: const Icon(
-                                Icons.favorite,
-                                color: Colors.red,
+                              leading: IconButton(
+                                icon: Icon(
+                                  record['favorite'] == true
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _toggleFavorite(
+                                    record['id'], record['favorite'] ?? false),
                               ),
                               title: Text(
                                 '${record['heartRate']} BPM',
@@ -160,6 +217,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   color: Colors.grey[600],
                                 ),
                               ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteRecord(record['id']),
+                              ),
                             ),
                           );
                         },
@@ -167,4 +228,4 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
-} 
+}
