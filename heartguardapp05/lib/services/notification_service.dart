@@ -12,8 +12,9 @@ class NotificationService {
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   // Firebase Cloud Messaging server key
   static const String _serverKey = 'AIzaSyAljUNCr6Qh6FikDif2oDZ6tU38wENopC0';
 
@@ -26,7 +27,8 @@ class NotificationService {
     );
 
     // Initialize local notifications
-    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
     );
@@ -34,6 +36,7 @@ class NotificationService {
 
     // Get FCM token
     String? token = await _fcm.getToken();
+
     if (token != null) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -71,7 +74,7 @@ class NotificationService {
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     print('Handling foreground message: ${message.messageId}');
-    
+
     // Show local notification
     const androidDetails = AndroidNotificationDetails(
       'heart_guard_channel',
@@ -104,12 +107,14 @@ class NotificationService {
     // Handle background message if needed
   }
 
-  Future<void> _saveNotificationToFirestore(String userId, RemoteMessage message) async {
+  Future<void> _saveNotificationToFirestore(
+      String userId, RemoteMessage message) async {
     try {
       await _firestore.collection('notifications').add({
         'userId': userId,
         'title': message.notification?.title ?? 'Heart Guard Alert',
-        'message': message.notification?.body ?? 'Please check your heart rate readings',
+        'message': message.notification?.body ??
+            'Please check your heart rate readings',
         'heartRate': int.tryParse(message.data['heartRate'] ?? '0'),
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
@@ -139,7 +144,8 @@ class NotificationService {
       if (token == null) return;
 
       // Create notification message
-      String message = 'Abnormality detected in your heart rate ($heartRate BPM). ';
+      String message =
+          'Abnormality detected in your heart rate ($heartRate BPM). ';
       if (heartRate < 60) {
         message += 'Your heart rate is too low. Please contact a doctor.';
       } else if (heartRate > 100) {
@@ -225,4 +231,4 @@ class NotificationService {
       rethrow;
     }
   }
-} 
+}
