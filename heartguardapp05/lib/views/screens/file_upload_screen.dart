@@ -45,23 +45,20 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
     }
   }
 
-  // Function to upload the selected file
+  // Function to upload and process the file
   void _uploadFile() async {
     if (_selectedFile != null) {
       if (mounted) {
         setState(() {
-          _statusMessage = "Uploading file...";
+          _statusMessage = "Processing file...";
         });
       }
 
-      final response = await _controller.uploadFileFromBytes(
-        _selectedFile!.bytes!,
-        _selectedFile!.name,
-      );
+      final response = await _controller.uploadFileFromBytes(_selectedFile!);
 
       if (mounted) {
         setState(() {
-          _statusMessage = response;
+          _statusMessage = "Prediction: $response";
         });
       }
     } else {

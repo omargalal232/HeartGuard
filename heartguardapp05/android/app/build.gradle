@@ -62,6 +62,8 @@ dependencies {
     
     // Add multidex dependency
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.core:core:1.6.0'
+
 
     // Firebase dependencies
     implementation 'com.google.firebase:firebase-analytics'
