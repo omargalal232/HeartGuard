@@ -351,7 +351,8 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         child: SafeArea(
           child: SizedBox(
-            height: MediaQuery.of(context).size.height, // Fill the screen height
+            height:
+                MediaQuery.of(context).size.height, // Fill the screen height
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SingleChildScrollView(

@@ -1,57 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../controllers/file_upload_controller.dart'; // Adjust this path based on your project structure.
+import '../../controllers/file_upload_controller.dart';
 
 class FileUploadScreen extends StatefulWidget {
-  const FileUploadScreen({super.key});
+  const FileUploadScreen({Key? key}) : super(key: key);
 
   @override
-  State createState() => _FileUploadScreenState();
+  State<FileUploadScreen> createState() => _FileUploadScreenState();
 }
 
 class _FileUploadScreenState extends State<FileUploadScreen> {
   final FileUploadController _controller = FileUploadController();
   String _statusMessage = "No file uploaded yet.";
-  String? _filePath;
+  PlatformFile? _selectedFile;
 
   // Function to pick an audio file
   void _pickFile() async {
-    // Open the file picker dialog
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowedExtensions: ['mp3'], // Only allow .mp3 files
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3'],
+      );
 
-    // Check if a file was selected
-    if (result != null && result.files.single.path != null) {
-      setState(() {
-        _filePath = result.files.single.path!;
-        _statusMessage = "File selected: ${result.files.single.name}";
-      });
-    } else {
-      setState(() {
-        _statusMessage = "No file selected.";
-      });
+      if (result != null && result.files.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _selectedFile = result.files.single;
+            _statusMessage = "File selected: ${_selectedFile!.name}";
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _statusMessage = "No file selected.";
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = "Error selecting file: $e";
+        });
+      }
     }
   }
 
   // Function to upload the selected file
   void _uploadFile() async {
-    if (_filePath != null) {
-      setState(() {
-        _statusMessage = "Uploading file...";
-      });
+    if (_selectedFile != null) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = "Uploading file...";
+        });
+      }
 
-      // Call the upload function from the controller
-      final response = await _controller.uploadFile(_filePath!);
+      final response = await _controller.uploadFileFromBytes(
+        _selectedFile!.bytes!,
+        _selectedFile!.name,
+      );
 
-      setState(() {
-        _statusMessage = response;
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = response;
+        });
+      }
     } else {
-      setState(() {
-        _statusMessage = "Please select a file first.";
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = "Please select a file first.";
+        });
+      }
     }
   }
 
@@ -74,12 +92,12 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _pickFile, // Trigger file picker
+                onPressed: _pickFile,
                 child: const Text('Pick File'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _uploadFile, // Trigger file upload
+                onPressed: _uploadFile,
                 child: const Text('Upload File'),
               ),
             ],

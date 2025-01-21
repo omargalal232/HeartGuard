@@ -1,13 +1,22 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 class FileUploadController {
-  final String serverUrl = "http://127.0.0.1:5000/predict"; // Update with your server URL
+  final String serverUrl =
+      "http://127.0.0.1:5000/predict"; // Update with your server URL
 
-  Future<String> uploadFile(String filePath) async {
+  Future<String> uploadFileFromBytes(
+      Uint8List fileBytes, String fileName) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse(serverUrl));
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+        ),
+      );
       var response = await request.send();
 
       if (response.statusCode == 200) {
