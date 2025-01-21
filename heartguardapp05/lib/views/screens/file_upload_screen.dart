@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../controllers/file_upload_controller.dart'; // Adjust this path based on your project structure.
+import '../../controllers/file_upload_controller.dart';
 
 class FileUploadScreen extends StatefulWidget {
   const FileUploadScreen({super.key});
@@ -49,7 +49,8 @@ class _FileUploadScreenState extends State<FileUploadScreen> {
       });
     }
   }
-@override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
