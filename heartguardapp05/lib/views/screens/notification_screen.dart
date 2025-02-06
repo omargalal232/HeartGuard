@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../../services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -192,44 +194,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _addTestNotification() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    try {
-      // Add a test notification to Firestore
-      await _firestore.collection('notifications').add({
-        'userId': user.uid,
-        'heartRate': 120,
-        'message': 'Abnormality detected in your heart rate (120 BPM). Your heart rate is too high. Please contact a doctor.',
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-        'abnormalityType': 'high_heart_rate',
-      });
-
-      // Refresh notifications
-      await _loadNotifications();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Test notification added'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error adding test notification: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   Widget _buildErrorView(String message) {
     return Center(
       child: Padding(
@@ -264,10 +228,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_alert),
-            onPressed: _addTestNotification,
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshNotifications,
           ),
@@ -279,26 +239,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ? _buildErrorView(_error!)
               : _notifications.isEmpty
                   ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'No notifications available',
-                              style: Theme.of(context).textTheme.bodyLarge,
-                              textAlign: TextAlign.center,
+                          Icon(
+                            Icons.notifications_none,
+                            size: 64,
+                            color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _refreshNotifications,
-                              child: const Text('Refresh'),
+                          Text(
+                            'No notifications yet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     )
-                  : ListView.builder(
+                  : RefreshIndicator(
+                      onRefresh: _refreshNotifications,
+                      child: ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _notifications.length,
                       itemBuilder: (context, index) {
@@ -307,39 +269,88 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         final isRead = notification['isRead'] as bool;
                         final message = notification['message'] as String;
                         final timestamp = notification['timestamp'] as Timestamp;
+                          final abnormalityType = notification['abnormalityType'] as String?;
 
-                        return Card(
+                          // Determine alert type and color
+                          Color alertColor;
+                          IconData alertIcon;
+                          if (abnormalityType == 'high_heart_rate') {
+                            alertColor = Colors.red;
+                            alertIcon = Icons.arrow_upward;
+                          } else if (abnormalityType == 'low_heart_rate') {
+                            alertColor = Colors.blue;
+                            alertIcon = Icons.arrow_downward;
+                          } else {
+                            alertColor = Colors.orange;
+                            alertIcon = Icons.warning;
+                          }
+
+                          return Dismissible(
+                            key: Key(notification['id']),
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 16),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
+                            ),
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (direction) {
+                              // Remove the notification
+                              _firestore
+                                  .collection('notifications')
+                                  .doc(notification['id'])
+                                  .delete();
+                              setState(() {
+                                _notifications.removeAt(index);
+                              });
+                            },
+                            child: Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: isRead ? 1 : 3,
-                          color: isRead ? null : Colors.blue.withOpacity(0.1),
+                              color: isRead ? null : alertColor.withOpacity(0.05),
+                              child: InkWell(
+                                onTap: () => _markAsRead(notification['id']),
                           child: Padding(
-                            padding: const EdgeInsets.all(12.0),
+                                  padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     Icon(
-                                      Icons.warning_amber_rounded,
-                                      color: isRead ? Colors.grey : Colors.orange,
+                                            alertIcon,
+                                            color: alertColor,
                                       size: 24,
                                     ),
                                     const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Heart Guard Alert',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                                          color: isRead ? Colors.grey[700] : Colors.black,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      _formatDateTime(timestamp),
+                                          Text(
+                                            '$heartRate BPM',
+                                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                              color: alertColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          if (!isRead)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: alertColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                'NEW',
                                       style: TextStyle(
+                                                  color: alertColor,
+                                                  fontWeight: FontWeight.bold,
                                         fontSize: 12,
-                                        color: Colors.grey[600],
+                                                ),
                                       ),
                                     ),
                                   ],
@@ -347,44 +358,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 const SizedBox(height: 8),
                                 Text(
                                   message,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: isRead ? Colors.grey[700] : Colors.black,
+                                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                          color: isRead ? Colors.grey[600] : Colors.black,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getHeartRateColor(heartRate).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '$heartRate BPM',
-                                        style: TextStyle(
-                                          color: _getHeartRateColor(heartRate),
-                                          fontWeight: FontWeight.w500,
+                                      Text(
+                                        _formatDateTime(timestamp),
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey[600],
                                         ),
                                       ),
-                                    ),
-                                    if (!isRead)
-                                      TextButton(
-                                        onPressed: () => _markAsRead(notification['id']),
-                                        child: const Text('Mark as Read'),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
                           ),
                         );
                       },
+                      ),
                     ),
     );
   }

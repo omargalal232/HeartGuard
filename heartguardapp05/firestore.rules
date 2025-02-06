@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Profile rules
+    match /profiles/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Heart rate data rules - allow authenticated users to read/write their own data
+    match /heartRateData/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Notifications rules with specific update controls
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() 
+        && resource.data.userId == request.auth.uid 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // User data and subcollections
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      // Emergency contacts subcollection
+      match /emergency_contacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // FCM tokens subcollection - essential for notifications
+      match /tokens/{tokenId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Campaign analytics with controlled access
+    match /campaign_analytics/{docId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // Analytics should be immutable
+      allow delete: if false; // Prevent deletion of analytics data
+    }
+  }
+}
