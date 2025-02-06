@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
 
@@ -31,11 +32,59 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final int dataWindowSize = 100;
   DateTime? lastUpdateTime;
   bool _disposed = false;
+  String? _fcmToken;
 
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
   final _notificationService = NotificationService();
   final _fcmService = FCMService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFCM();
+  }
+
+  Future<void> _initializeFCM() async {
+    try {
+      // Get the FCM token
+      _fcmToken = await FirebaseMessaging.instance.getToken();
+      print('FCM Token: $_fcmToken');
+
+      // Save the token to Firestore
+      if (_fcmToken != null && _auth.currentUser != null) {
+        await _firestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .collection('tokens')
+            .doc('fcm')
+            .set({
+          'token': _fcmToken,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'platform': 'android',
+        });
+      }
+
+      // Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        _fcmToken = newToken;
+        if (_auth.currentUser != null) {
+          await _firestore
+              .collection('users')
+              .doc(_auth.currentUser!.uid)
+              .collection('tokens')
+              .doc('fcm')
+              .set({
+            'token': newToken,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'platform': 'android',
+          });
+        }
+      });
+    } catch (e) {
+      print('Error initializing FCM: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -131,13 +180,12 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       print('Heart rate data saved successfully');
 
       // Send FCM notification for abnormal readings
-      if ((rawValue < 60 || rawValue > 100) && !_disposed) {
-        final deviceToken = 'eHdVTYh9QPmflHP_RB6Olc:APA91bHUsZWDXkcscf2HAwgEtJZk9Hh6o6NAAktPxOwgcLHCj4sw7DyqSg1p_-YQsZGIsjyYMuOcbMqZl12sOWwNkQPBQeDq_2_RNj4VZ_r9HPRxEWpw4sA';
+      if ((rawValue < 60 || rawValue > 100) && !_disposed && _fcmToken != null) {
         final abnormalityType = rawValue < 60 ? 'low_heart_rate' : 'high_heart_rate';
         
         print('Abnormal heart rate detected: $rawValue BPM - Sending FCM notification');
         final success = await _fcmService.sendAbnormalHeartRateNotification(
-          deviceToken: deviceToken,
+          deviceToken: _fcmToken!,
           heartRate: rawValue,
           abnormalityType: abnormalityType,
         );

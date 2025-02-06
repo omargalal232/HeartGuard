@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:jose/jose.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class FCMService {
   static final FCMService _instance = FCMService._internal();
@@ -50,17 +51,25 @@ class FCMService {
       };
 
       // Create JWT
-      final key = JsonWebKey.fromPem(_credentials['private_key']);
-      
+      final privateKey = _credentials['private_key'];
+
       final builder = JsonWebSignatureBuilder()
         ..jsonContent = claims
-        ..addRecipient(key, algorithm: 'RS256');
+        ..setProtectedHeader('alg', 'RS256')
+        ..setProtectedHeader('typ', 'JWT');
+
+      // Add the private key as a recipient using RSA
+      final key = JsonWebKey.fromPem(privateKey, keyId: _credentials['private_key_id']);
+      builder.addRecipient(key, algorithm: 'RS256');
 
       final jwt = builder.build().toCompactSerialization();
 
       // Exchange JWT for access token
       final response = await http.post(
         Uri.parse('https://oauth2.googleapis.com/token'),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: {
           'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer',
           'assertion': jwt,
@@ -93,7 +102,7 @@ class FCMService {
     try {
       final token = await getAccessToken();
       if (token == null) {
-        print('Failed to get access token');
+        print('Failed to get access token for FCM notification');
         return false;
       }
 
@@ -111,47 +120,74 @@ class FCMService {
         body = 'Your heart rate is abnormal at ${heartRate.round()} BPM. Please check your condition.';
       }
 
+      final message = {
+        'message': {
+          'token': deviceToken,
+          'notification': {
+            'title': title,
+            'body': body,
+          },
+          'data': {
+            'heartRate': heartRate.toString(),
+            'abnormalityType': abnormalityType,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+          'android': {
+            'notification': {
+              'channel_id': 'heart_guard_channel',
+              'default_sound': true,
+              'default_vibrate_timings': true,
+              'notification_priority': 'PRIORITY_HIGH',
+              'visibility': 'PUBLIC',
+            },
+          },
+        },
+      };
+
+      print('Sending FCM notification with payload: ${json.encode(message)}');
+
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/v1/projects/heart-guard-1c49e/messages:send'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode({
-          'message': {
-            'token': deviceToken,
-            'notification': {
-              'title': title,
-              'body': body,
-            },
-            'data': {
-              'heartRate': heartRate.toString(),
-              'abnormalityType': abnormalityType,
-              'timestamp': DateTime.now().toIso8601String(),
-            },
-            'android': {
-              'notification': {
-                'channel_id': 'heart_guard_channel',
-                'default_sound': true,
-                'default_vibrate_timings': true,
-                'notification_priority': 'PRIORITY_HIGH',
-                'visibility': 'PUBLIC',
-              },
-            },
-          },
-        }),
+        body: json.encode(message),
       );
 
       if (response.statusCode == 200) {
-        print('Abnormal heart rate notification sent successfully');
+        print('FCM notification sent successfully');
         return true;
       } else {
-        print('Failed to send abnormal heart rate notification: ${response.statusCode}');
+        print('Failed to send FCM notification. Status: ${response.statusCode}');
         print('Response: ${response.body}');
+        
+        // If token expired, retry once with a new token
+        if (response.statusCode == 401) {
+          _accessToken = null; // Clear cached token
+          final newToken = await getAccessToken();
+          if (newToken != null) {
+            final retryResponse = await http.post(
+              Uri.parse('https://fcm.googleapis.com/v1/projects/heart-guard-1c49e/messages:send'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $newToken',
+              },
+              body: json.encode(message),
+            );
+            
+            if (retryResponse.statusCode == 200) {
+              print('FCM notification sent successfully after retry');
+              return true;
+            }
+            print('Retry failed. Status: ${retryResponse.statusCode}');
+            print('Retry response: ${retryResponse.body}');
+          }
+        }
         return false;
       }
     } catch (e) {
-      print('Error sending abnormal heart rate notification: $e');
+      print('Error sending FCM notification: $e');
       return false;
     }
   }
@@ -164,6 +200,13 @@ class FCMService {
         return false;
       }
 
+      // Get the device token
+      final deviceToken = await FirebaseMessaging.instance.getToken();
+      if (deviceToken == null) {
+        print('Failed to get device token');
+        return false;
+      }
+
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/v1/projects/heart-guard-1c49e/messages:send'),
         headers: {
@@ -172,7 +215,7 @@ class FCMService {
         },
         body: json.encode({
           'message': {
-            'topic': 'test',
+            'token': deviceToken,
             'notification': {
               'title': 'Test Notification',
               'body': 'This is a test notification from Heart Guard',
