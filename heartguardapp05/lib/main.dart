@@ -9,13 +9,101 @@ import 'views/screens/monitoring_screen.dart';
 import 'views/screens/notification_screen.dart';
 import 'firebase_options.dart';
 import 'views/screens/file_upload_screen.dart';
+import 'services/notification_service.dart';
+import 'services/fcm_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
+// Handle background messages
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('Handling background message: ${message.messageId}');
+}
+
+Future<void> main() async {
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Initialize NotificationService first
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
+    // Initialize FCM Service and get access token
+    final fcmService = FCMService();
+    final accessToken = await fcmService.getAccessToken();
+    if (accessToken != null) {
+      print('\n=== FCM Access Token ===');
+      print(accessToken);
+      print('========================\n');
+
+      // Send a test notification
+      print('Sending test notification...');
+      final success = await fcmService.sendTestNotification();
+      print('Test notification ${success ? 'sent successfully' : 'failed'}');
+    }
+
+    // Request notification permissions with all options
+    final messaging = FirebaseMessaging.instance;
+    
+    // Set background message handler before anything else
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    
+    // Request permission with all options
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      announcement: true,
+      carPlay: true,
+      criticalAlert: true,
+      provisional: false,
+    );
+    print('User granted permission: ${settings.authorizationStatus}');
+
+    // Set foreground notification presentation options
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // Get FCM token and print it for debugging
+    String? token = await messaging.getToken();
+    print('FCM Token: $token');
+
+    // Listen for token refresh
+    messaging.onTokenRefresh.listen((newToken) {
+      print('FCM Token refreshed: $newToken');
+    });
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Got a message whilst in the foreground!');
+      print('Message data: ${message.data}');
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+      }
+    });
+
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    print('Error initializing app: $e');
+    print('Stack trace: $stackTrace');
+    // Run app with error state
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Error initializing app: $e'),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -36,7 +124,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/monitoring': (context) => const MonitoringScreen(),
-        '/heart sound': (context)=> const FileUploadScreen(),
+        '/heart sound': (context) => const FileUploadScreen(),
         '/notifications': (context) => const NotificationScreen(),
         '/signup': (context) => const SignupScreen(),
       },

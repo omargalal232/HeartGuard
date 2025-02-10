@@ -5,6 +5,9 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../../services/notification_service.dart';
+import '../../services/fcm_service.dart';
 
 class MonitoringScreen extends StatefulWidget {
   const MonitoringScreen({super.key});
@@ -14,9 +17,9 @@ class MonitoringScreen extends StatefulWidget {
 }
 
 class _MonitoringScreenState extends State<MonitoringScreen> {
-  final String ubidotsToken = 'BBUS-dotPnGDytYSjPQNBGKs68MztvEV1uD';
+  final String ubidotsToken = 'BBUS-gKl3iGUVlBfpU2Aan3mixPdnPjruzP';
   final String deviceLabel = 'esp32';
-  final String variableLabel = 'heart_rate';
+  final String variableLabel = 'sensor12';
   
   List<FlSpot> ecgData = [];
   Timer? _timer;
@@ -28,33 +31,71 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   double rawBpmValue = 0;
   final int dataWindowSize = 100;
   DateTime? lastUpdateTime;
+  bool _disposed = false;
+  String? _fcmToken;
 
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
+  final _notificationService = NotificationService();
+  final _fcmService = FCMService();
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _initializeFCM();
   }
 
-  // Save heart rate data to Firestore with exact Ubidots value
-  Future<void> _saveHeartRateData(double rawValue, DateTime timestamp) async {
+  Future<void> _initializeFCM() async {
     try {
-      final userId = _auth.currentUser?.uid;
-      if (userId == null) return;
+      // Get the FCM token
+      _fcmToken = await FirebaseMessaging.instance.getToken();
+      print('FCM Token: $_fcmToken');
 
-      await _firestore.collection('heartRateData').add({
-        'userId': userId,
-        'heartRate': rawValue,
-        'timestamp': timestamp,
+      // Save the token to Firestore
+      if (_fcmToken != null && _auth.currentUser != null) {
+        await _firestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .collection('tokens')
+            .doc('fcm')
+            .set({
+          'token': _fcmToken,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'platform': 'android',
+        });
+      }
+
+      // Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        _fcmToken = newToken;
+        if (_auth.currentUser != null) {
+          await _firestore
+              .collection('users')
+              .doc(_auth.currentUser!.uid)
+              .collection('tokens')
+              .doc('fcm')
+              .set({
+            'token': newToken,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'platform': 'android',
+          });
+        }
       });
     } catch (e) {
-      debugPrint('Error saving heart rate data: $e');
+      print('Error initializing FCM: $e');
     }
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    stopMonitoring();
+    super.dispose();
+  }
+
   Future<void> fetchEcgData() async {
+    if (_disposed) return;
+    
     try {
       final response = await http.get(
         Uri.parse(
@@ -66,45 +107,113 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         },
       ).timeout(const Duration(seconds: 2));
 
+      if (_disposed) return;
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['results'] != null && data['results'].isNotEmpty) {
           final value = data['results'][0]['value'].toDouble();
-          final timestamp = DateTime.fromMillisecondsSinceEpoch(
-            (data['results'][0]['timestamp'] * 1000).toInt(),
-          );
+          final timestamp = DateTime.now();
           
           // Only update if we have a new value
-          if (lastUpdateTime != timestamp) {
-            setState(() {
-              rawBpmValue = value;
-              heartRate = value.round();
-              lastUpdateTime = timestamp;
-              
-              // Add new data point with exact Ubidots value
-              if (ecgData.length >= dataWindowSize) {
-                ecgData.removeAt(0);
-                // Shift x-coordinates
-                for (int i = 0; i < ecgData.length; i++) {
-                  ecgData[i] = FlSpot(i.toDouble(), ecgData[i].y);
+          if (lastUpdateTime == null || timestamp.difference(lastUpdateTime!).inMilliseconds > 500) {
+            print('New heart rate reading: $value BPM at ${timestamp.toIso8601String()}');
+            
+            if (!_disposed) {
+              setState(() {
+                rawBpmValue = value;
+                heartRate = value.round();
+                lastUpdateTime = timestamp;
+                
+                if (ecgData.length >= dataWindowSize) {
+                  ecgData.removeAt(0);
+                  for (int i = 0; i < ecgData.length; i++) {
+                    ecgData[i] = FlSpot(i.toDouble(), ecgData[i].y);
+                  }
                 }
-              }
-              ecgData.add(FlSpot(ecgData.length.toDouble(), value));
-            });
+                ecgData.add(FlSpot(ecgData.length.toDouble(), value));
+              });
+            }
 
-            // Save the exact heart rate data with timestamp
-            _saveHeartRateData(value, timestamp);
+            // Check for abnormalities and save data
+            if (value < 60 || value > 100) {
+              print('Abnormal heart rate detected: $value BPM');
+              print('Saving data and sending notification...');
+              await _saveHeartRateData(value, timestamp);
+            }
           }
         }
       } else {
         debugPrint('Error fetching data: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error fetching heart rate data: $e');
+      if (!_disposed) {
+        debugPrint('Error fetching heart rate data: $e');
+      }
+    }
+  }
+
+  Future<void> _saveHeartRateData(double rawValue, DateTime timestamp) async {
+    if (_disposed) return;
+
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        print('Error: No user logged in');
+        return;
+      }
+
+      print('Saving heart rate data: $rawValue BPM');
+      
+      // Create Firestore timestamp
+      final firestoreTimestamp = Timestamp.fromDate(timestamp);
+      
+      // Save heart rate data to Firestore
+      await _firestore.collection('heartRateData').add({
+        'userId': userId,
+        'heartRate': rawValue,
+        'timestamp': firestoreTimestamp,
+        'isAbnormal': rawValue < 60 || rawValue > 100,
+        'abnormalityType': rawValue < 60 ? 'low_heart_rate' : (rawValue > 100 ? 'high_heart_rate' : null),
+      });
+      print('Heart rate data saved successfully');
+
+      // Send FCM notification for abnormal readings
+      if ((rawValue < 60 || rawValue > 100) && !_disposed && _fcmToken != null) {
+        final abnormalityType = rawValue < 60 ? 'low_heart_rate' : 'high_heart_rate';
+        
+        print('Abnormal heart rate detected: $rawValue BPM - Sending FCM notification');
+        final success = await _fcmService.sendAbnormalHeartRateNotification(
+          deviceToken: _fcmToken!,
+          heartRate: rawValue,
+          abnormalityType: abnormalityType,
+        );
+        
+        if (success) {
+          print('FCM notification sent successfully');
+        } else {
+          print('Failed to send FCM notification');
+        }
+
+        // Also send through NotificationService for local notifications
+        if (!_disposed) {
+          await _notificationService.sendAbnormalityNotification(
+            userId: userId,
+            heartRate: rawValue.round(),
+            abnormalityType: abnormalityType,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error saving heart rate data and sending notification: $e');
+      print('Error details: ${e.toString()}');
     }
   }
 
   void startMonitoring() {
+    if (_disposed) return;
+    
     setState(() {
       isMonitoring = true;
       ecgData.clear();
@@ -118,16 +227,24 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     fetchEcgData();
     
     // Set up periodic fetching every 500ms
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      fetchEcgData();
+      if (!_disposed) {
+        fetchEcgData();
+      } else {
+        timer.cancel();
+      }
     });
   }
 
   void stopMonitoring() {
-    setState(() {
-      isMonitoring = false;
-    });
     _timer?.cancel();
+    _timer = null;
+    if (!_disposed && mounted) {
+      setState(() {
+        isMonitoring = false;
+      });
+    }
   }
 
   Color _getHeartRateColor() {

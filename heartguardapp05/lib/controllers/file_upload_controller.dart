@@ -3,7 +3,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+<<<<<<< HEAD
 import 'dart:io'; // Import Dart's IO library to handle file operations
+=======
+import 'dart:io';
+>>>>>>> 779991d61a40ef21e589ce8ab323adbaece65764
 
 class FileUploadController {
   // Function to run the local Python script

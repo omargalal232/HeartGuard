@@ -35,7 +35,14 @@ dependencies:
   provider: ^6.1.2
   url_launcher: ^6.3.1
   file_picker: ^8.1.7
+<<<<<<< HEAD
   path_provider: ^2.0.11
+=======
+  path_provider: ^2.1.2
+  jwt_decoder: ^2.0.1
+  pointycastle: ^3.7.4
+  jose: ^0.3.4
+>>>>>>> 779991d61a40ef21e589ce8ab323adbaece65764
 
 dev_dependencies:
   flutter_test:
