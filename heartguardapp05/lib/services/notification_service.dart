@@ -36,7 +36,7 @@ class NotificationService {
         'heart_guard_channel',
         'Heart Guard Notifications',
         description: 'Notifications for heart abnormalities and campaigns',
-        importance: Importance.max,
+        importance: Importance.high,
         enableVibration: true,
         playSound: true,
         showBadge: true,
@@ -48,11 +48,12 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(androidChannel);
 
-      // Initialize local notifications with proper icon
-      const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-      );
+    // Initialize local notifications
+    const initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
       
       await _localNotifications.initialize(
         initializationSettings,
@@ -75,14 +76,14 @@ class NotificationService {
       
       print('User granted permission: ${settings.authorizationStatus}');
 
-      // Get FCM token
-      String? token = await _fcm.getToken();
+    // Get FCM token
+    String? token = await _fcm.getToken();
       print('FCM Token: $token');
 
-      if (token != null) {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await _saveTokenToFirestore(user.uid, token);
+    if (token != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _saveTokenToFirestore(user.uid, token);
           await _subscribeToTopics();
         }
       }
@@ -94,23 +95,23 @@ class NotificationService {
         sound: true,
       );
 
-      // Listen for token refresh
+    // Listen for token refresh
       _fcm.onTokenRefresh.listen((newToken) async {
         print('FCM Token refreshed: $newToken');
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
           await _saveTokenToFirestore(user.uid, newToken);
-        }
-      });
+      }
+    });
 
-      // Handle incoming messages when app is in foreground
+    // Handle incoming messages when app is in foreground
       FirebaseMessaging.onMessage.listen((message) async {
         print('Got a message whilst in the foreground!');
         print('Message data: ${message.data}');
         await _handleForegroundMessage(message);
       });
 
-      // Handle when user taps on notification when app is in background
+    // Handle when user taps on notification when app is in background
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
         print('Message opened from background state!');
         print('Message data: ${message.data}');
@@ -407,25 +408,37 @@ class NotificationService {
       print('Sending automatic abnormality notification for user: $userId');
       print('Heart rate: $heartRate BPM, Type: $abnormalityType');
 
+      // Get user's FCM token
+      final tokenDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('tokens')
+          .doc('fcm')
+          .get();
+
+      if (!tokenDoc.exists) {
+        print('Error: No FCM token found for user: $userId');
+        return;
+      }
+
+      final token = tokenDoc.data()?['token'] as String?;
+      if (token == null) {
+        print('Error: FCM token is null for user: $userId');
+        return;
+      }
+
       // Create detailed notification message
-      String title;
+      String title = 'Heart Rate Alert';
       String message;
       String severity;
       
       if (abnormalityType == 'low_heart_rate') {
-        title = 'Low Heart Rate Alert!';
         message = 'Your heart rate is critically low at $heartRate BPM. Please seek medical attention if you feel unwell.';
         severity = 'Low';
       } else if (abnormalityType == 'high_heart_rate') {
-        title = 'High Heart Rate Alert!';
         message = 'Your heart rate is critically high at $heartRate BPM. Please seek medical attention if you feel unwell.';
         severity = 'High';
-      } else if (abnormalityType == 'monitoring_started') {
-        title = 'Monitoring Started';
-        message = 'Heart rate monitoring has started. We will notify you of any abnormalities.';
-        severity = 'Info';
       } else {
-        title = 'Heart Rate Alert';
         message = 'Abnormal heart rate detected ($heartRate BPM). Please monitor your condition.';
         severity = 'Unknown';
       }
@@ -446,34 +459,13 @@ class NotificationService {
       });
       print('Notification saved with ID: ${notificationRef.id}');
 
-      // Show local notification
-      final androidDetails = AndroidNotificationDetails(
-        'heart_guard_channel',
-        'Heart Guard Notifications',
-        channelDescription: 'Notifications for heart abnormalities and campaigns',
-        importance: Importance.max,
-        priority: Priority.high,
-        showWhen: true,
-        enableVibration: true,
-        icon: '@mipmap/ic_launcher',
-        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        styleInformation: BigTextStyleInformation(
-          message,
-          htmlFormatBigText: true,
-          contentTitle: title,
-          htmlFormatContentTitle: true,
-        ),
-      );
-
-      final notificationDetails = NotificationDetails(android: androidDetails);
-
-      // Show the notification with a unique ID
-      await _localNotifications.show(
-        DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        title,
-        message,
-        notificationDetails,
-        payload: json.encode({
+      // Send FCM notification with enhanced data
+      print('Sending FCM notification...');
+      final success = await _sendFCMNotification(
+        token: token,
+        title: title,
+        body: message,
+        data: {
           'heartRate': heartRate.toString(),
           'abnormalityType': abnormalityType,
           'userId': userId,
@@ -482,20 +474,35 @@ class NotificationService {
           'severity': severity,
           'source': 'automatic_monitoring',
           'requiresAction': 'true',
-        }),
+        },
       );
 
-      print('Local notification sent successfully');
-
-      // Update analytics
-      await _firestore.collection('campaign_analytics').add({
-        'userId': userId,
-        'type': 'automatic_notification',
-        'abnormalityType': abnormalityType,
-        'heartRate': heartRate,
-        'timestamp': FieldValue.serverTimestamp(),
-        'success': true,
-      });
+      if (success) {
+        print('Automatic abnormality notification sent successfully');
+        
+        // Update analytics
+        await _firestore.collection('campaign_analytics').add({
+          'userId': userId,
+          'type': 'automatic_notification',
+          'abnormalityType': abnormalityType,
+          'heartRate': heartRate,
+          'timestamp': FieldValue.serverTimestamp(),
+          'success': true,
+        });
+      } else {
+        print('Failed to send automatic abnormality notification');
+        
+        // Log failure in analytics
+        await _firestore.collection('campaign_analytics').add({
+          'userId': userId,
+          'type': 'automatic_notification',
+          'abnormalityType': abnormalityType,
+          'heartRate': heartRate,
+          'timestamp': FieldValue.serverTimestamp(),
+          'success': false,
+          'error': 'FCM delivery failed',
+        });
+      }
     } catch (e, stackTrace) {
       print('Error sending abnormality notification: $e');
       print('Stack trace: $stackTrace');
@@ -514,6 +521,54 @@ class NotificationService {
       } catch (analyticsError) {
         print('Error logging to analytics: $analyticsError');
       }
+    }
+  }
+
+  Future<bool> _sendFCMNotification({
+    required String token,
+    required String title,
+    required String body,
+    required Map<String, String> data,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://fcm.googleapis.com/v1/projects/heart-guard-1c49e/messages:send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${await _fcm.getToken()}',
+        },
+        body: jsonEncode({
+          'message': {
+            'token': token,
+            'notification': {
+              'title': title,
+              'body': body,
+            },
+            'data': data,
+            'android': {
+              'notification': {
+                'channel_id': 'heart_guard_channel',
+                'default_sound': true,
+                'default_vibrate_timings': true,
+                'notification_priority': 'PRIORITY_HIGH',
+                'visibility': 'PUBLIC',
+              },
+            },
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('FCM notification sent successfully');
+        return true;
+      } else {
+        print('Failed to send FCM notification. Status: ${response.statusCode}');
+        print('Response: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error sending FCM notification: $e');
+      return false;
     }
   }
 
@@ -678,46 +733,6 @@ class NotificationService {
       print('Error sending test notification: $e');
       print('Stack trace: $stackTrace');
       return false;
-    }
-  }
-
-  Future<void> showLocalNotification({
-    required String title,
-    required String body,
-    Map<String, dynamic>? payload,
-  }) async {
-    try {
-      final androidDetails = AndroidNotificationDetails(
-        'heart_guard_channel',
-        'Heart Guard Notifications',
-        channelDescription: 'Notifications for heart abnormalities and campaigns',
-        importance: Importance.high,
-        priority: Priority.high,
-        showWhen: true,
-        enableVibration: true,
-        icon: '@mipmap/ic_launcher',
-        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        styleInformation: BigTextStyleInformation(
-          body,
-          htmlFormatBigText: true,
-          contentTitle: title,
-          htmlFormatContentTitle: true,
-        ),
-      );
-
-      final notificationDetails = NotificationDetails(android: androidDetails);
-
-      await _localNotifications.show(
-        DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        title,
-        body,
-        notificationDetails,
-        payload: payload != null ? json.encode(payload) : null,
-      );
-
-      print('Local notification sent successfully');
-    } catch (e) {
-      print('Error showing local notification: $e');
     }
   }
 }

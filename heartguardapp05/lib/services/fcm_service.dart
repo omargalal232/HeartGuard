@@ -115,9 +115,6 @@ class FCMService {
       } else if (abnormalityType == 'low_heart_rate') {
         title = 'Low Heart Rate Alert!';
         body = 'Your heart rate is low at ${heartRate.round()} BPM. Please check your condition.';
-      } else if (abnormalityType == 'monitoring_started') {
-        title = 'Monitoring Started';
-        body = 'Heart rate monitoring has started. We will notify you of any abnormalities.';
       } else {
         title = 'Abnormal Heart Rate Alert!';
         body = 'Your heart rate is abnormal at ${heartRate.round()} BPM. Please check your condition.';

@@ -42,21 +42,47 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   @override
   void initState() {
     super.initState();
-    _requestNotificationPermissions();
+    _initializeFCM();
   }
 
-  Future<void> _requestNotificationPermissions() async {
+  Future<void> _initializeFCM() async {
     try {
-      // Request notification permissions
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-      print('User granted permission: ${settings.authorizationStatus}');
+      // Get the FCM token
+      _fcmToken = await FirebaseMessaging.instance.getToken();
+      print('FCM Token: $_fcmToken');
+
+      // Save the token to Firestore
+      if (_fcmToken != null && _auth.currentUser != null) {
+        await _firestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .collection('tokens')
+            .doc('fcm')
+            .set({
+          'token': _fcmToken,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'platform': 'android',
+        });
+      }
+
+      // Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+        _fcmToken = newToken;
+        if (_auth.currentUser != null) {
+          await _firestore
+              .collection('users')
+              .doc(_auth.currentUser!.uid)
+              .collection('tokens')
+              .doc('fcm')
+              .set({
+            'token': newToken,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'platform': 'android',
+          });
+        }
+      });
     } catch (e) {
-      print('Error requesting notification permissions: $e');
+      print('Error initializing FCM: $e');
     }
   }
 
@@ -153,16 +179,31 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       });
       print('Heart rate data saved successfully');
 
-      // Send notification for abnormal readings
-      if ((rawValue < 60 || rawValue > 100) && !_disposed) {
+      // Send FCM notification for abnormal readings
+      if ((rawValue < 60 || rawValue > 100) && !_disposed && _fcmToken != null) {
         final abnormalityType = rawValue < 60 ? 'low_heart_rate' : 'high_heart_rate';
         
-        print('Abnormal heart rate detected: $rawValue BPM - Sending notification');
-        await _notificationService.sendAbnormalityNotification(
-          userId: userId,
-          heartRate: rawValue.round(),
+        print('Abnormal heart rate detected: $rawValue BPM - Sending FCM notification');
+        final success = await _fcmService.sendAbnormalHeartRateNotification(
+          deviceToken: _fcmToken!,
+          heartRate: rawValue,
           abnormalityType: abnormalityType,
         );
+        
+        if (success) {
+          print('FCM notification sent successfully');
+        } else {
+          print('Failed to send FCM notification');
+        }
+
+        // Also send through NotificationService for local notifications
+        if (!_disposed) {
+          await _notificationService.sendAbnormalityNotification(
+            userId: userId,
+            heartRate: rawValue.round(),
+            abnormalityType: abnormalityType,
+          );
+        }
       }
     } catch (e) {
       print('Error saving heart rate data and sending notification: $e');
@@ -181,9 +222,6 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       rawBpmValue = 0;
       lastUpdateTime = null;
     });
-
-    // Show notification that monitoring has started
-    _showMonitoringStartedNotification();
     
     // Initial fetch
     fetchEcgData();
@@ -197,25 +235,6 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         timer.cancel();
       }
     });
-  }
-
-  Future<void> _showMonitoringStartedNotification() async {
-    try {
-      final userId = _auth.currentUser?.uid;
-      if (userId == null) {
-        print('Error: No user logged in');
-        return;
-      }
-
-      print('Sending monitoring started notification');
-      await _notificationService.sendAbnormalityNotification(
-        userId: userId,
-        heartRate: 0,
-        abnormalityType: 'monitoring_started'
-      );
-    } catch (e) {
-      print('Error showing monitoring started notification: $e');
-    }
   }
 
   void stopMonitoring() {

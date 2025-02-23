@@ -11,7 +11,6 @@ import 'firebase_options.dart';
 import 'views/screens/file_upload_screen.dart';
 import 'services/notification_service.dart';
 import 'services/fcm_service.dart';
-import 'views/screens/chatbot_screen.dart';
 
 // Handle background messages
 @pragma('vm:entry-point')
@@ -115,20 +114,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'HeartGuard',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/monitoring': (context) => const MonitoringScreen(),
         '/heart sound': (context) => const FileUploadScreen(),
         '/notifications': (context) => const NotificationScreen(),
         '/signup': (context) => const SignupScreen(),
-        '/chatbot': (context) => ChatbotScreen(),
       },
     );
   }
@@ -205,10 +203,6 @@ class _InitializationWrapperState extends State<InitializationWrapper> {
       );
     }
 
-    return const HomeScreen();
+    return const LoginScreen();
   }
 }
-
-
-
-  
