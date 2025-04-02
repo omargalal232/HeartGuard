@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
+import '../../services/SMS_Service.dart';
 
 class MonitoringScreen extends StatefulWidget {
   const MonitoringScreen({super.key});
@@ -38,6 +39,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final _auth = FirebaseAuth.instance;
   final _notificationService = NotificationService();
   final _fcmService = FCMService();
+  final _smsService = SMSService();
 
   @override
   void initState() {
@@ -179,35 +181,26 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       });
       print('Heart rate data saved successfully');
 
-      // Send FCM notification for abnormal readings
-      if ((rawValue < 60 || rawValue > 100) && !_disposed && _fcmToken != null) {
-        final abnormalityType = rawValue < 60 ? 'low_heart_rate' : 'high_heart_rate';
+      // Check for abnormalities and send notifications
+      if (rawValue < 60 || rawValue > 100) {
+        final abnormalityType = rawValue < 60 ? 'Low Heart Rate' : 'High Heart Rate';
         
-        print('Abnormal heart rate detected: $rawValue BPM - Sending FCM notification');
-        final success = await _fcmService.sendAbnormalHeartRateNotification(
-          deviceToken: _fcmToken!,
-          heartRate: rawValue,
-          abnormalityType: abnormalityType,
-        );
-        
-        if (success) {
-          print('FCM notification sent successfully');
-        } else {
-          print('Failed to send FCM notification');
-        }
+        // Send SMS notification
+        await _smsService.sendEmergencyMessage(abnormalityType);
 
-        // Also send through NotificationService for local notifications
-        if (!_disposed) {
-          await _notificationService.sendAbnormalityNotification(
-            userId: userId,
-            heartRate: rawValue.round(),
-            abnormalityType: abnormalityType,
+        // Show in-app notification
+        if (!_disposed && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Emergency contacts notified about: $abnormalityType'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
     } catch (e) {
-      print('Error saving heart rate data and sending notification: $e');
-      print('Error details: ${e.toString()}');
+      print('Error saving heart rate data and sending notifications: $e');
     }
   }
 
