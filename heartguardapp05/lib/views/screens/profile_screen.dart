@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _nameController,
                           decoration: const InputDecoration(
-                            labelText: 'Name',
+                            labelText: 'Full Name',
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
