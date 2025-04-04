@@ -4,7 +4,6 @@ import 'profile_screen.dart';
 import 'notification_screen.dart';
 import 'history_screen.dart';
 import 'file_upload_screen.dart'; // Add the import for the FileUploadScreen.
-import 'Chatbot_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> {
     const HistoryScreen(),
     const FileUploadScreen(),
     const ProfileScreen(),
-    ChatbotPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -61,10 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: 'Chat',
           ),
         ],
       ),

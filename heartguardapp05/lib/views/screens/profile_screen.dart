@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../controllers/profile_controller.dart';
 import '../../models/profile_model.dart';
 import 'emergency_contact_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,8 +18,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String? _error;
   ProfileModel? _profile;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -107,37 +104,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _addEmergencyContact(String phoneNumber) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      await _firestore.collection('users').doc(user.uid).update({
-        'emergency_contacts': FieldValue.arrayUnion([phoneNumber])
-      });
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Emergency contact added successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error adding emergency contact: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to add emergency contact'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextFormField(
                           controller: _nameController,
                           decoration: const InputDecoration(
-                            labelText: 'Full Name',
+                            labelText: 'Name',
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
