@@ -4,15 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:jose/jose.dart';
+import 'logger_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  final Logger _logger = Logger();
+  static const String _tag = 'NotificationService';
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -24,12 +27,12 @@ class NotificationService {
   DateTime? _tokenExpiry;
 
   // Add topic constants
-  static const String TOPIC_HEART_ALERTS = 'heart_guard_alerts';
-  static const String TOPIC_HIGH_HEART_RATE = 'high_heart_rate';
-  static const String TOPIC_LOW_HEART_RATE = 'low_heart_rate';
-  static const String TOPIC_GENERAL = 'general_updates';
+  static const String topicHeartAlerts = 'heart_guard_alerts';
+  static const String topicHighHeartRate = 'high_heart_rate';
+  static const String topicLowHeartRate = 'low_heart_rate';
+  static const String topicGeneral = 'general_updates';
 
-  Future<void> initialize() async {
+  Future<void> init() async {
     try {
       // Create the Android notification channel
       const androidChannel = AndroidNotificationChannel(
@@ -48,17 +51,17 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(androidChannel);
 
-    // Initialize local notifications
-    const initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+      // Initialize local notifications
+      const initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+      );
       
       await _localNotifications.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (details) {
-          print('Notification clicked: ${details.payload}');
+          _logger.i(_tag, 'Notification clicked: ${details.payload}');
           _handleNotificationClick(details.payload);
         },
       );
@@ -74,16 +77,16 @@ class NotificationService {
         provisional: false,
       );
       
-      print('User granted permission: ${settings.authorizationStatus}');
+      _logger.i(_tag, 'User granted permission: ${settings.authorizationStatus}');
 
-    // Get FCM token
-    String? token = await _fcm.getToken();
-      print('FCM Token: $token');
+      // Get FCM token
+      String? token = await _fcm.getToken();
+      _logger.i(_tag, 'FCM Token: $token');
 
-    if (token != null) {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await _saveTokenToFirestore(user.uid, token);
+      if (token != null) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await _saveTokenToFirestore(user.uid, token);
           await _subscribeToTopics();
         }
       }
@@ -95,50 +98,32 @@ class NotificationService {
         sound: true,
       );
 
-    // Listen for token refresh
+      // Listen for token refresh
       _fcm.onTokenRefresh.listen((newToken) async {
-        print('FCM Token refreshed: $newToken');
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+        _logger.i(_tag, 'FCM Token refreshed: $newToken');
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
           await _saveTokenToFirestore(user.uid, newToken);
-      }
-    });
+        }
+      });
 
-    // Handle incoming messages when app is in foreground
+      // Handle incoming messages when app is in foreground
       FirebaseMessaging.onMessage.listen((message) async {
-        print('Got a message whilst in the foreground!');
-        print('Message data: ${message.data}');
+        _logger.i(_tag, 'Got a message whilst in the foreground!');
+        _logger.i(_tag, 'Message data: ${message.data}');
         await _handleForegroundMessage(message);
       });
 
-    // Handle when user taps on notification when app is in background
+      // Handle when user taps on notification when app is in background
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        print('Message opened from background state!');
-        print('Message data: ${message.data}');
+        _logger.i(_tag, 'Message opened from background state!');
+        _logger.i(_tag, 'Message data: ${message.data}');
         _handleBackgroundMessage(message);
       });
       
-      print('NotificationService initialized successfully');
+      _logger.i(_tag, 'NotificationService initialized successfully');
     } catch (e, stackTrace) {
-      print('Error initializing NotificationService: $e');
-      print('Stack trace: $stackTrace');
-    }
-  }
-
-  Future<void> _loadCredentials() async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/firebase_credentials.json');
-      
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        _credentials = json.decode(contents);
-        print('Credentials loaded successfully');
-      } else {
-        print('No credentials file found');
-      }
-    } catch (e) {
-      print('Error loading credentials: $e');
+      _logger.e(_tag, 'Error initializing NotificationService', e, stackTrace);
     }
   }
 
@@ -156,9 +141,9 @@ class NotificationService {
       // Save the credentials
       await file.writeAsString(jsonContent);
       _credentials = credentials;
-      print('Credentials saved successfully');
+      _logger.i(_tag, 'Credentials saved successfully');
     } catch (e) {
-      print('Error saving credentials: $e');
+      _logger.e(_tag, 'Error saving credentials', e);
       rethrow;
     }
   }
@@ -230,27 +215,27 @@ class NotificationService {
 
   Future<void> _subscribeToTopics() async {
     try {
-      await _fcm.subscribeToTopic(TOPIC_HEART_ALERTS);
-      await _fcm.subscribeToTopic(TOPIC_HIGH_HEART_RATE);
-      await _fcm.subscribeToTopic(TOPIC_LOW_HEART_RATE);
-      await _fcm.subscribeToTopic(TOPIC_GENERAL);
+      await _fcm.subscribeToTopic(topicHeartAlerts);
+      await _fcm.subscribeToTopic(topicHighHeartRate);
+      await _fcm.subscribeToTopic(topicLowHeartRate);
+      await _fcm.subscribeToTopic(topicGeneral);
       
-      print('Subscribed to all notification topics');
+      _logger.i(_tag, 'Subscribed to all notification topics');
       
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         await _firestore.collection('users').doc(user.uid).update({
           'notification_topics': {
-            TOPIC_HEART_ALERTS: true,
-            TOPIC_HIGH_HEART_RATE: true,
-            TOPIC_LOW_HEART_RATE: true,
-            TOPIC_GENERAL: true,
+            topicHeartAlerts: true,
+            topicHighHeartRate: true,
+            topicLowHeartRate: true,
+            topicGeneral: true,
           },
           'last_topic_update': FieldValue.serverTimestamp(),
         });
       }
     } catch (e) {
-      print('Error subscribing to topics: $e');
+      _logger.e(_tag, 'Error subscribing to topics', e);
     }
   }
 
@@ -278,7 +263,7 @@ class NotificationService {
         case 'high_heart_rate':
         case 'low_heart_rate':
           // Add specific handling for heart rate alerts
-          print('Handling heart rate alert click: $type');
+          _logger.i(_tag, 'Handling heart rate alert click: $type');
           break;
         case 'campaign':
           // Handle campaign notification clicks
@@ -288,10 +273,10 @@ class NotificationService {
           }
           break;
         default:
-          print('Unknown notification type: $type');
+          _logger.i(_tag, 'Unknown notification type: $type');
       }
     } catch (e) {
-      print('Error handling notification click: $e');
+      _logger.e(_tag, 'Error handling notification click', e);
     }
   }
 
@@ -307,13 +292,13 @@ class NotificationService {
         });
       }
     } catch (e) {
-      print('Error tracking campaign click: $e');
+      _logger.e(_tag, 'Error tracking campaign click', e);
     }
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    print('Handling foreground message: ${message.messageId}');
-    print('Message data: ${message.data}');
+    _logger.i(_tag, 'Handling foreground message: ${message.messageId}');
+    _logger.i(_tag, 'Message data: ${message.data}');
 
     try {
       // Prepare notification data
@@ -373,30 +358,13 @@ class NotificationService {
         });
       }
     } catch (e) {
-      print('Error handling foreground message: $e');
+      _logger.e(_tag, 'Error handling foreground message', e);
     }
   }
 
   void _handleBackgroundMessage(RemoteMessage message) {
-    print('Handling background message: ${message.messageId}');
+    _logger.i(_tag, 'Handling background message: ${message.messageId}');
     // Background messages are handled by the global handler in main.dart
-  }
-
-  Future<void> _saveNotificationToFirestore(
-      String userId, RemoteMessage message) async {
-    try {
-      await _firestore.collection('notifications').add({
-        'userId': userId,
-        'title': message.notification?.title ?? 'Heart Guard Alert',
-        'message': message.notification?.body ??
-            'Please check your heart rate readings',
-        'heartRate': int.tryParse(message.data['heartRate'] ?? '0'),
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
-    } catch (e) {
-      print('Error saving notification to Firestore: $e');
-    }
   }
 
   Future<void> sendAbnormalityNotification({
@@ -405,8 +373,8 @@ class NotificationService {
     required String abnormalityType,
   }) async {
     try {
-      print('Sending automatic abnormality notification for user: $userId');
-      print('Heart rate: $heartRate BPM, Type: $abnormalityType');
+      _logger.i(_tag, 'Sending automatic abnormality notification for user: $userId');
+      _logger.i(_tag, 'Heart rate: $heartRate BPM, Type: $abnormalityType');
 
       // Get user's FCM token
       final tokenDoc = await _firestore
@@ -417,13 +385,13 @@ class NotificationService {
           .get();
 
       if (!tokenDoc.exists) {
-        print('Error: No FCM token found for user: $userId');
+        _logger.i(_tag, 'Error: No FCM token found for user: $userId');
         return;
       }
 
       final token = tokenDoc.data()?['token'] as String?;
       if (token == null) {
-        print('Error: FCM token is null for user: $userId');
+        _logger.i(_tag, 'Error: FCM token is null for user: $userId');
         return;
       }
 
@@ -443,7 +411,7 @@ class NotificationService {
         severity = 'Unknown';
       }
 
-      print('Saving notification to Firestore...');
+      _logger.i(_tag, 'Saving notification to Firestore...');
       // Save notification with additional metadata
       final notificationRef = await _firestore.collection('notifications').add({
         'userId': userId,
@@ -457,10 +425,10 @@ class NotificationService {
         'source': 'automatic_monitoring',
         'requiresAction': true,
       });
-      print('Notification saved with ID: ${notificationRef.id}');
+      _logger.i(_tag, 'Notification saved with ID: ${notificationRef.id}');
 
       // Send FCM notification with enhanced data
-      print('Sending FCM notification...');
+      _logger.i(_tag, 'Sending FCM notification...');
       final success = await _sendFCMNotification(
         token: token,
         title: title,
@@ -478,7 +446,7 @@ class NotificationService {
       );
 
       if (success) {
-        print('Automatic abnormality notification sent successfully');
+        _logger.i(_tag, 'Automatic abnormality notification sent successfully');
         
         // Update analytics
         await _firestore.collection('campaign_analytics').add({
@@ -490,7 +458,7 @@ class NotificationService {
           'success': true,
         });
       } else {
-        print('Failed to send automatic abnormality notification');
+        _logger.i(_tag, 'Failed to send automatic abnormality notification');
         
         // Log failure in analytics
         await _firestore.collection('campaign_analytics').add({
@@ -504,8 +472,7 @@ class NotificationService {
         });
       }
     } catch (e, stackTrace) {
-      print('Error sending abnormality notification: $e');
-      print('Stack trace: $stackTrace');
+      _logger.e(_tag, 'Error sending abnormality notification', e, stackTrace);
       
       // Log error in analytics
       try {
@@ -519,7 +486,7 @@ class NotificationService {
           'error': e.toString(),
         });
       } catch (analyticsError) {
-        print('Error logging to analytics: $analyticsError');
+        _logger.e(_tag, 'Error logging to analytics', analyticsError);
       }
     }
   }
@@ -559,15 +526,15 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        print('FCM notification sent successfully');
+        _logger.i(_tag, 'FCM notification sent successfully');
         return true;
       } else {
-        print('Failed to send FCM notification. Status: ${response.statusCode}');
-        print('Response: ${response.body}');
+        _logger.i(_tag, 'Failed to send FCM notification. Status: ${response.statusCode}');
+        _logger.i(_tag, 'Response: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error sending FCM notification: $e');
+      _logger.e(_tag, 'Error sending FCM notification', e);
       return false;
     }
   }
@@ -575,16 +542,16 @@ class NotificationService {
   Future<String?> _getAccessToken() async {
     try {
       if (_credentials == null) {
-        print('Error: No credentials available. Please ensure credentials are loaded.');
+        _logger.i(_tag, 'Error: No credentials available. Please ensure credentials are loaded.');
         return null;
       }
 
       if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
-        print('Using cached access token (expires in: ${_tokenExpiry!.difference(DateTime.now()).inMinutes} minutes)');
+        _logger.i(_tag, 'Using cached access token (expires in: ${_tokenExpiry!.difference(DateTime.now()).inMinutes} minutes)');
         return _accessToken;
       }
 
-      print('Generating new access token...');
+      _logger.i(_tag, 'Generating new access token...');
       final jwt = _generateJWT();
       
       final response = await http.post(
@@ -599,62 +566,60 @@ class NotificationService {
         final data = json.decode(response.body);
         _accessToken = data['access_token'];
         _tokenExpiry = DateTime.now().add(Duration(seconds: data['expires_in']));
-        print('New access token generated successfully (expires in: ${data['expires_in']} seconds)');
+        _logger.i(_tag, 'New access token generated successfully (expires in: ${data['expires_in']} seconds)');
         return _accessToken;
       } else {
-        print('Failed to get access token. Status: ${response.statusCode}');
-        print('Response: ${response.body}');
+        _logger.i(_tag, 'Failed to get access token. Status: ${response.statusCode}');
+        _logger.i(_tag, 'Response: ${response.body}');
         return null;
       }
     } catch (e, stackTrace) {
-      print('Error getting access token: $e');
-      print('Stack trace: $stackTrace');
+      _logger.e(_tag, 'Error getting access token', e, stackTrace);
       return null;
     }
   }
 
   Future<bool> verifyCredentials() async {
     try {
-      print('Verifying Firebase credentials...');
+      _logger.i(_tag, 'Verifying Firebase credentials...');
       
       if (_credentials == null) {
-        print('Error: No credentials loaded');
+        _logger.i(_tag, 'Error: No credentials loaded');
         return false;
       }
 
       // Verify project ID
       if (_credentials!['project_id'] != 'heart-guard-1c49e') {
-        print('Error: Invalid project ID');
+        _logger.i(_tag, 'Error: Invalid project ID');
         return false;
       }
 
       // Test JWT generation
       try {
-        print('Testing JWT generation...');
+        _logger.i(_tag, 'Testing JWT generation...');
         final jwt = _generateJWT();
         if (jwt.isEmpty) {
-          print('Error: Generated JWT is empty');
+          _logger.i(_tag, 'Error: Generated JWT is empty');
           return false;
         }
-        print('JWT generation successful');
+        _logger.i(_tag, 'JWT generation successful');
       } catch (e) {
-        print('Error generating JWT: $e');
+        _logger.e(_tag, 'Error generating JWT', e);
         return false;
       }
 
       // Test access token generation
-      print('Testing access token generation...');
+      _logger.i(_tag, 'Testing access token generation...');
       final accessToken = await _getAccessToken();
       if (accessToken == null) {
-        print('Error: Failed to generate access token');
+        _logger.i(_tag, 'Error: Failed to generate access token');
         return false;
       }
 
-      print('Credentials verified successfully');
+      _logger.i(_tag, 'Credentials verified successfully');
       return true;
     } catch (e, stackTrace) {
-      print('Error verifying credentials: $e');
-      print('Stack trace: $stackTrace');
+      _logger.e(_tag, 'Error verifying credentials', e, stackTrace);
       return false;
     }
   }
@@ -666,20 +631,20 @@ class NotificationService {
     Map<String, dynamic>? additionalData,
   }) async {
     try {
-      print('Sending test notification to token: ${fcmToken.substring(0, 10)}...');
+      _logger.i(_tag, 'Sending test notification to token: ${fcmToken.substring(0, 10)}...');
       
       if (_credentials == null) {
-        print('Error: No credentials available. Please save your service account credentials first.');
+        _logger.i(_tag, 'Error: No credentials available. Please save your service account credentials first.');
         return false;
       }
 
       final accessToken = await _getAccessToken();
       if (accessToken == null) {
-        print('Error: Failed to get access token');
+        _logger.i(_tag, 'Error: Failed to get access token');
         return false;
       }
 
-      print('Sending FCM request...');
+      _logger.i(_tag, 'Sending FCM request...');
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/v1/projects/${_credentials!['project_id']}/messages:send'),
         headers: {
@@ -708,30 +673,29 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        print('Test notification sent successfully');
+        _logger.i(_tag, 'Test notification sent successfully');
         final responseData = json.decode(response.body);
-        print('FCM Message ID: ${responseData['name']}');
+        _logger.i(_tag, 'FCM Message ID: ${responseData['name']}');
         return true;
       } else {
-        print('Failed to send test notification. Status: ${response.statusCode}');
-        print('Response: ${response.body}');
+        _logger.i(_tag, 'Failed to send test notification. Status: ${response.statusCode}');
+        _logger.i(_tag, 'Response: ${response.body}');
         
         // Parse error response
         try {
           final errorData = json.decode(response.body);
-          print('Error details:');
-          print('  Code: ${errorData['error']['code']}');
-          print('  Message: ${errorData['error']['message']}');
-          print('  Status: ${errorData['error']['status']}');
+          _logger.i(_tag, 'Error details:');
+          _logger.i(_tag, '  Code: ${errorData['error']['code']}');
+          _logger.i(_tag, '  Message: ${errorData['error']['message']}');
+          _logger.i(_tag, '  Status: ${errorData['error']['status']}');
         } catch (e) {
-          print('Could not parse error response: $e');
+          _logger.i(_tag, 'Could not parse error response: $e');
         }
         
         return false;
       }
     } catch (e, stackTrace) {
-      print('Error sending test notification: $e');
-      print('Stack trace: $stackTrace');
+      _logger.e(_tag, 'Error sending test notification', e, stackTrace);
       return false;
     }
   }

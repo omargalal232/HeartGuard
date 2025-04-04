@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';

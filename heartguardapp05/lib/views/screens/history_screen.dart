@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+import '../../services/logger_service.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -13,6 +14,8 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  final Logger _logger = Logger();
+  static const String _tag = 'HistoryScreen';
   bool _isLoading = true;
   List<Map<String, dynamic>> _heartRateHistory = [];
   String? _error;
@@ -73,7 +76,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading heart rate history: $e');
+      _logger.e(_tag, 'Error loading heart rate history', e);
       if (!mounted) return;
       setState(() {
         _error = 'Failed to load heart rate history';
@@ -87,7 +90,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       await _firestore.collection('heartRateData').doc(id).delete();
       _loadHeartRateHistory();
     } catch (e) {
-      print('Error deleting record: $e');
+      _logger.e(_tag, 'Error deleting record', e);
       setState(() {
         _error = 'Failed to delete record';
       });
@@ -101,7 +104,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       });
       _loadHeartRateHistory();
     } catch (e) {
-      print('Error toggling favorite: $e');
+      _logger.e(_tag, 'Error toggling favorite', e);
       setState(() {
         _error = 'Failed to toggle favorite';
       });

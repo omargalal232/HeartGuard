@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/logger_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -10,8 +11,10 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  final Logger _logger = Logger();
+  static const String _tag = 'DashboardScreen';
   String userName = '';
 
   @override
@@ -32,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      _logger.e(_tag, 'Error loading user data', e);
     }
   }
 

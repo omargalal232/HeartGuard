@@ -21,7 +21,6 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -48,7 +47,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -74,14 +72,16 @@ class _SignupScreenState extends State<SignupScreen> {
             .doc(profile.uid)
             .set(profile.toMap());
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-        Navigator.pushReplacementNamed(context, '/login');
+          Navigator.pushReplacementNamed(context, '/login');
+        }
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -114,10 +114,8 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _showError(String message) {
-    setState(() {
-      _errorMessage = message;
-    });
-
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -167,7 +165,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withAlpha(26),
                                   blurRadius: 10,
                                   spreadRadius: 2,
                                 ),

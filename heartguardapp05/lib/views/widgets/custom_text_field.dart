@@ -55,7 +55,6 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _obscureText = true;
-  bool _hasError = false;
   String? _errorText;
 
   @override
@@ -101,7 +100,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
     if (widget.validator != null) {
       final error = widget.validator!(value);
       setState(() {
-        _hasError = error != null;
         _errorText = error;
       });
     }

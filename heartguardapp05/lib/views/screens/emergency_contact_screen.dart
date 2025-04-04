@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/logger_service.dart';
 
 class EmergencyContactScreen extends StatefulWidget {
   const EmergencyContactScreen({super.key});
@@ -17,10 +18,15 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final Logger _logger = Logger();
+  static const String _tag = 'EmergencyContactScreen';
 
   Future<void> _addContact() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Store the context before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
@@ -37,21 +43,50 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contact added successfully')),
-        );
-        // Clear the form
-        _nameController.clear();
-        _phoneController.clear();
-        _relationController.clear();
-      }
+      // Check if the widget is still mounted before using BuildContext
+      if (!mounted) return;
+      
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Contact added successfully')),
+      );
+      // Clear the form
+      _nameController.clear();
+      _phoneController.clear();
+      _relationController.clear();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding contact: $e')),
-        );
-      }
+      _logger.e(_tag, 'Error adding contact', e);
+      
+      // Check if the widget is still mounted before using BuildContext
+      if (!mounted) return;
+      
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Error adding contact: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteContact(DocumentReference reference) async {
+    try {
+      // Store the context before async operation
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      
+      await reference.delete();
+      
+      if (!mounted) return;
+      
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Contact deleted successfully')),
+      );
+    } catch (e) {
+      _logger.e(_tag, 'Error deleting contact', e);
+      
+      if (!mounted) return;
+      
+      // Store the context to avoid using it after an async gap
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Error deleting contact: $e')),
+      );
     }
   }
 
@@ -157,23 +192,8 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
                           '${contact['phone'] ?? ''}\n${contact['relation'] ?? ''}'),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
-                        onPressed: () async {
-                          try {
-                            await contacts[index].reference.delete();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Contact deleted successfully')),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Error deleting contact: $e')),
-                              );
-                            }
-                          }
+                        onPressed: () {
+                          _deleteContact(contacts[index].reference);
                         },
                       ),
                     );

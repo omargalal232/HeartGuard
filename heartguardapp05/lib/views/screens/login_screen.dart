@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../services/logger_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? error;
@@ -22,14 +23,15 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _auth = FirebaseAuth.instance;
+  final Logger _logger = Logger();
+  static const String _tag = 'LoginScreen';
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  String? _errorMessage;
-  bool _isFormValid = false;
   bool _rememberMe = false;
 
   @override
@@ -37,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen>
     super.initState();
     _setupAnimations();
     _setupFormValidation();
+    _loadSavedEmail();
 
     if (widget.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,7 +61,22 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
 
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
     _animationController.forward();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    // TODO: Implement email saving/loading functionality
+    // This would typically use shared_preferences or secure storage
   }
 
   void _setupFormValidation() {
@@ -89,37 +107,23 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _validateForm() {
-    final isEmailValid = _emailController.text.isNotEmpty &&
-        _validateEmail(_emailController.text);
-    final isPasswordValid = _passwordController.text.length >= 6;
-
-    setState(() {
-      _isFormValid = isEmailValid && isPasswordValid;
-    });
+    if (_formKey.currentState != null) {
+      _formKey.currentState!.validate();
+    }
   }
 
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) {
-      _showError('Please fix the errors in the form');
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
-
-      // Basic validation before making the request
-      if (email.isEmpty || password.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'invalid-input',
-          message: 'Email and password cannot be empty',
-        );
-      }
 
       // Attempt to sign in with Firebase
       await _auth.signInWithEmailAndPassword(
@@ -176,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen>
         default:
           message = e.message ?? 'An error occurred during sign in.';
       }
+      _logger.e(_tag, 'Sign in error: ${e.code}', e);
       _showError(message);
 
       // Clear password on authentication error
@@ -185,6 +190,7 @@ class _LoginScreenState extends State<LoginScreen>
       // Focus password field for better UX
       _passwordFocusNode.requestFocus();
     } catch (e) {
+      _logger.e(_tag, 'Unexpected sign in error', e);
       _showError('An unexpected error occurred. Please try again.');
     } finally {
       if (mounted) {
@@ -196,13 +202,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showError(String message) {
-    // Clear any existing snackbars
     ScaffoldMessenger.of(context).clearSnackBars();
-
-    setState(() {
-      _errorMessage = message;
-    });
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -345,14 +345,13 @@ class _LoginScreenState extends State<LoginScreen>
             colors: [
               Theme.of(context).colorScheme.primary,
               Theme.of(context).colorScheme.secondary,
-              Theme.of(context).colorScheme.primary.withOpacity(0.8),
+              Theme.of(context).colorScheme.primary.withAlpha(204),
             ],
           ),
         ),
         child: SafeArea(
           child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height, // Fill the screen height
+            height: MediaQuery.of(context).size.height,
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: SingleChildScrollView(
@@ -361,134 +360,140 @@ class _LoginScreenState extends State<LoginScreen>
                   children: [
                     const SizedBox(height: 60),
                     // Logo and App Name
-                    Column(
-                      children: [
-                        Hero(
-                          tag: 'app_logo',
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        children: [
+                          Hero(
+                            tag: 'app_logo',
+                            child: Container(
+                              width: 120,
+                              height: 120,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(26),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/img/123.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Heart Monitor',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
                               color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withAlpha(26),
+                                  offset: const Offset(1, 1),
+                                  blurRadius: 2,
                                 ),
                               ],
                             ),
-                            child: Image.asset(
-                              'assets/img/123.png',
-                              fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Your Health, Our Priority',
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(230),
+                              fontSize: 16,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withAlpha(26),
+                                  offset: const Offset(1, 1),
+                                  blurRadius: 2,
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Heart Monitor',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.1),
-                                offset: const Offset(1, 1),
-                                blurRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Your Health, Our Priority',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.1),
-                                offset: const Offset(1, 1),
-                                blurRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 48),
 
                     // Login Form
-                    Card(
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                'Welcome Back',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 24),
-                              _buildEmailField(),
-                              const SizedBox(height: 20),
-                              _buildPasswordField(),
-                              const SizedBox(height: 16),
-                              _buildRememberMeCheckbox(),
-                              const SizedBox(height: 32),
-                              ElevatedButton(
-                                onPressed: _isLoading ? null : _signIn,
-                                style: ElevatedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 4,
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
-                                        ),
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Welcome Back',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            Theme.of(context).colorScheme.primary,
                                       ),
-                              ),
-                            ],
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                _buildEmailField(),
+                                const SizedBox(height: 20),
+                                _buildPasswordField(),
+                                const SizedBox(height: 16),
+                                _buildRememberMeCheckbox(),
+                                const SizedBox(height: 32),
+                                ElevatedButton(
+                                  onPressed: _isLoading ? null : _signIn,
+                                  style: ElevatedButton.styleFrom(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 16),
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    Colors.white),
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Sign In',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -496,29 +501,32 @@ class _LoginScreenState extends State<LoginScreen>
                     const SizedBox(height: 24),
 
                     // Sign Up Link
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              Navigator.pushNamed(context, '/signup');
-                            },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 12),
-                      ),
-                      child: const Text(
-                        'Don\'t have an account? Sign Up',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black12,
-                              offset: Offset(1, 1),
-                              blurRadius: 2,
-                            ),
-                          ],
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: TextButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                Navigator.pushNamed(context, '/signup');
+                              },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          'Don\'t have an account? Sign Up',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black12,
+                                offset: Offset(1, 1),
+                                blurRadius: 2,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/emergency_contact.dart';
+import '../services/logger_service.dart';
 
 class EmergencyProvider with ChangeNotifier {
   final _firestore = FirebaseFirestore.instance;
+  final Logger _logger = Logger();
+  static const String _tag = 'EmergencyProvider';
+  
   List<EmergencyContact> _contacts = [];
   bool _isEmergencyMode = false;
 
@@ -23,7 +27,7 @@ class EmergencyProvider with ChangeNotifier {
           .toList();
       notifyListeners();
     } catch (e) {
-      print('Error loading emergency contacts: $e');
+      _logger.e(_tag, 'Error loading emergency contacts', e);
     }
   }
 
@@ -39,7 +43,7 @@ class EmergencyProvider with ChangeNotifier {
       _contacts.add(updatedContact);
       notifyListeners();
     } catch (e) {
-      print('Error adding emergency contact: $e');
+      _logger.e(_tag, 'Error adding emergency contact', e);
     }
   }
 

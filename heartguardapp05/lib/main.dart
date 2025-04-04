@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 import 'views/screens/login_screen.dart';
 import 'views/screens/signup_screen.dart';
 import 'views/screens/home_screen.dart';
@@ -11,99 +15,81 @@ import 'firebase_options.dart';
 import 'views/screens/file_upload_screen.dart';
 import 'services/notification_service.dart';
 import 'services/fcm_service.dart';
+import 'services/logger_service.dart';
 
-// Handle background messages
+final Logger _logger = Logger();
+const String _tag = 'App';
+
+// Background message handler for Firebase Messaging
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('Handling background message: ${message.messageId}');
+  try {
+    await Firebase.initializeApp();
+    final logger = Logger();
+    logger.i('App', 'Handling background message: ${message.messageId}');
+    logger.i('App', 'Message data: ${message.data}');
+    logger.i('App', 'Message notification: ${message.notification?.title}');
+  } catch (e) {
+    print('Error in background handler: $e');
+  }
 }
 
-Future<void> main() async {
+Future<void> initializeFirebase() async {
   try {
-    WidgetsFlutterBinding.ensureInitialized();
-    
-    // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // Initialize NotificationService first
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-
-    // Initialize FCM Service and get access token
-    final fcmService = FCMService();
-    final accessToken = await fcmService.getAccessToken();
-    if (accessToken != null) {
-      print('\n=== FCM Access Token ===');
-      print(accessToken);
-      print('========================\n');
-
-      // Send a test notification
-      print('Sending test notification...');
-      final success = await fcmService.sendTestNotification();
-      print('Test notification ${success ? 'sent successfully' : 'failed'}');
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      _logger.i(_tag, 'Firebase initialized successfully');
+    } else {
+      _logger.i(_tag, 'Firebase already initialized');
     }
-
-    // Request notification permissions with all options
-    final messaging = FirebaseMessaging.instance;
-    
-    // Set background message handler before anything else
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    
-    // Request permission with all options
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      announcement: true,
-      carPlay: true,
-      criticalAlert: true,
-      provisional: false,
-    );
-    print('User granted permission: ${settings.authorizationStatus}');
-
-    // Set foreground notification presentation options
-    await messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // Get FCM token and print it for debugging
-    String? token = await messaging.getToken();
-    print('FCM Token: $token');
-
-    // Listen for token refresh
-    messaging.onTokenRefresh.listen((newToken) {
-      print('FCM Token refreshed: $newToken');
-    });
-
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Got a message whilst in the foreground!');
-      print('Message data: ${message.data}');
-      if (message.notification != null) {
-        print('Message also contained a notification: ${message.notification}');
-      }
-    });
-
-    runApp(const MyApp());
   } catch (e, stackTrace) {
-    print('Error initializing app: $e');
-    print('Stack trace: $stackTrace');
-    // Run app with error state
-    runApp(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text('Error initializing app: $e'),
-          ),
-        ),
-      ),
-    );
+    _logger.e(_tag, 'Error initializing Firebase', e, stackTrace);
   }
+}
+
+Future<void> initializeServices() async {
+  try {
+    // Set background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Initialize notification service
+    await NotificationService().init();
+    _logger.i(_tag, 'Notification service initialized');
+
+    // Initialize FCM service
+    await FCMService().init();
+    _logger.i(_tag, 'FCM service initialized');
+  } catch (e, stackTrace) {
+    _logger.e(_tag, 'Error initializing services', e, stackTrace);
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Set system overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
+  // Initialize Firebase and services
+  await initializeFirebase();
+  await initializeServices();
+  
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -114,11 +100,74 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'HeartGuard',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.black,
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          filled: true,
+          fillColor: Colors.grey[100],
+        ),
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          filled: true,
+          fillColor: Colors.grey[800],
+        ),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
@@ -128,81 +177,7 @@ class MyApp extends StatelessWidget {
         '/notifications': (context) => const NotificationScreen(),
         '/signup': (context) => const SignupScreen(),
       },
+      home: const LoginScreen(),
     );
-  }
-}
-
-class InitializationWrapper extends StatefulWidget {
-  const InitializationWrapper({super.key});
-
-  @override
-  State<InitializationWrapper> createState() => _InitializationWrapperState();
-}
-
-class _InitializationWrapperState extends State<InitializationWrapper> {
-  bool _initialized = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeApp();
-  }
-
-  Future<void> _initializeApp() async {
-    try {
-      WidgetsFlutterBinding.ensureInitialized();
-
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-
-      final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      setState(() {
-        _initialized = true;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error != null) {
-      return MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text('Error initializing app: $_error'),
-          ),
-        ),
-      );
-    }
-
-    if (!_initialized) {
-      return MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Initializing...'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return const LoginScreen();
   }
 }

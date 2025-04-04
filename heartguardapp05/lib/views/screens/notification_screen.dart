@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../../services/notification_service.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../services/logger_service.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -17,21 +16,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   final _notificationService = NotificationService();
+  final Logger _logger = Logger();
+  static const String _tag = 'NotificationScreen';
+  
   bool _isLoading = true;
   List<Map<String, dynamic>> _notifications = [];
   String? _error;
   StreamSubscription<QuerySnapshot>? _heartRateSubscription;
+  final _scrollController = ScrollController();
+  DocumentSnapshot? _lastDocument;
+  bool _noMoreData = false;
 
   @override
   void initState() {
     super.initState();
     _loadNotifications();
     _startHeartRateMonitoring();
+    _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
     _heartRateSubscription?.cancel();
+    _scrollController.removeListener(_scrollListener);
     super.dispose();
   }
 
@@ -79,11 +86,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
         );
       }
     }, onError: (error) {
-      print('Error monitoring heart rate: $error');
+      _logger.e(_tag, 'Error monitoring heart rate', error);
     });
   }
 
-  Future<void> _loadNotifications() async {
+  Future<void> _loadNotifications({DocumentSnapshot? lastDocument}) async {
     if (!mounted) return;
 
     setState(() {
@@ -101,17 +108,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return;
       }
 
-      final snapshot = await _firestore
+      Query query = _firestore
           .collection('notifications')
           .where('userId', isEqualTo: user.uid)
           .orderBy('timestamp', descending: true)
-          .limit(50) // Limit to last 50 notifications
-          .get();
+          .limit(50); // Limit to last 50 notifications
+          
+      // If we have a last document, start after it (for pagination)
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      final snapshot = await query.get();
 
       if (!mounted) return;
+      
+      if (snapshot.docs.isEmpty) {
+        setState(() {
+          _noMoreData = true;
+          _isLoading = false;
+        });
+        return;
+      }
 
       final notifications = snapshot.docs.map((doc) {
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>;
         return {
           'id': doc.id,
           'message': data['message'] ?? 'Abnormal heart rate detected',
@@ -124,11 +145,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }).toList();
 
       setState(() {
-        _notifications = notifications;
+        // If loading more, append to the existing list
+        if (lastDocument != null) {
+          _notifications.addAll(notifications);
+        } else {
+          _notifications = notifications;
+        }
         _isLoading = false;
+        if (snapshot.docs.isNotEmpty) {
+          _lastDocument = snapshot.docs.last;
+        }
       });
     } catch (e) {
-      print('Error loading notifications: $e');
+      _logger.e(_tag, 'Error loading notifications', e);
       if (!mounted) return;
       setState(() {
         _error = e.toString();
@@ -178,7 +207,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         }
       });
     } catch (e) {
-      print('Error marking notification as read: $e');
+      _logger.e(_tag, 'Error marking notification as read', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -310,7 +339,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: isRead ? 1 : 3,
-                              color: isRead ? null : alertColor.withOpacity(0.05),
+                              color: isRead ? null : alertColor.withAlpha(13),
                               child: InkWell(
                                 onTap: () => _markAsRead(notification['id']),
                           child: Padding(
@@ -341,7 +370,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                                 vertical: 4,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: alertColor.withOpacity(0.1),
+                                                color: alertColor.withAlpha(26),
                                                 borderRadius: BorderRadius.circular(12),
                                               ),
                                               child: Text(
@@ -381,12 +410,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Color _getHeartRateColor(int heartRate) {
-    if (heartRate < 60) {
-      return Colors.blue; // Low heart rate
-    } else if (heartRate > 100) {
-      return Colors.red; // High heart rate
+  void _scrollListener() {
+    if (_scrollController.position.maxScrollExtent == _scrollController.offset) {
+      _loadMoreNotifications();
     }
-    return Colors.green; // Normal heart rate
+  }
+
+  void _loadMoreNotifications() {
+    if (!_isLoading && !_noMoreData) {
+      _loadNotifications(lastDocument: _lastDocument);
+    }
   }
 } 

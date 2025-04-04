@@ -17,17 +17,29 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web - '
+        'you can reconfigure this by running the FlutterFire CLI again.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for ios - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.macOS:
-        return macos;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for macos - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -35,10 +47,20 @@ class DefaultFirebaseOptions {
         );
       default:
         throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
+          'DefaultFirebaseOptions have not been configured for $defaultTargetPlatform - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
     }
   }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'YOUR-API-KEY',
+    appId: 'YOUR-APP-ID',
+    messagingSenderId: 'YOUR-SENDER-ID',
+    projectId: 'YOUR-PROJECT-ID',
+    databaseURL: 'YOUR-DATABASE-URL',
+    storageBucket: 'YOUR-STORAGE-BUCKET',
+  );
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyD4Nl9us2UBIF_9AOjYjrojJ2Fl5v7zzBE',
@@ -46,15 +68,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '872244640879',
     projectId: 'heart-guard-1c49e',
     authDomain: 'heart-guard-1c49e.firebaseapp.com',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
-  );
-
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAljUNCr6Qh6FikDif2oDZ6tU38wENopC0',
-    appId: '1:872244640879:android:80862f715a5e573a2a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
     databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
     storageBucket: 'heart-guard-1c49e.firebasestorage.app',
   );
