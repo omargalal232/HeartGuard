@@ -68,7 +68,7 @@ Future<void> initializeServices() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -84,11 +84,11 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   // Initialize Firebase and services
   await initializeFirebase();
   await initializeServices();
-  
+
   runApp(const MyApp());
 }
 
