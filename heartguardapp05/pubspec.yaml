@@ -42,6 +42,8 @@ dependencies:
   jwt_decoder: ^2.0.1
   pointycastle: ^3.7.4
   jose: ^0.3.4
+  dart_openai: ^4.0.1
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -53,5 +55,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - .env
     - assets/img/123.png
     - assets/python/

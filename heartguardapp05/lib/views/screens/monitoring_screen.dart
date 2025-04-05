@@ -385,7 +385,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                     ),
                     icon: Icon(isMonitoring ? Icons.stop : Icons.play_arrow),
                     label: Text(
-                        isMonitoring ? 'Stop Monitoring' : 'Start Monitoring'),
+                        isMonitoring ? 'Stop Monitoring' : 'Start Mooring'),
                   ),
                 ),
                 const SizedBox(width: 12),

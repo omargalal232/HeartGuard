@@ -5,12 +5,14 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'views/screens/login_screen.dart';
 import 'views/screens/signup_screen.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/monitoring_screen.dart';
 import 'views/screens/notification_screen.dart';
+import 'views/screens/chatbot_screen.dart';
 import 'firebase_options.dart';
 import 'views/screens/file_upload_screen.dart';
 import 'services/notification_service.dart';
@@ -66,8 +68,56 @@ Future<void> initializeServices() async {
   }
 }
 
+class ApiKeyErrorScreen extends StatelessWidget {
+  const ApiKeyErrorScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 50, color: Colors.red),
+              const SizedBox(height: 20),
+              const Text(
+                'Configuration Error',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text('Please check your .env file configuration'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => SystemNavigator.pop(),
+                child: const Text('Exit App'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables with error handling
+  try {
+    await dotenv.load(fileName: ".env");
+    final apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
+
+    if (apiKey.isEmpty) {
+      _logger.e(_tag, 'API key not found in .env file');
+      runApp(const ApiKeyErrorScreen());
+      return;
+    }
+  } catch (e) {
+    _logger.e(_tag, 'Error loading .env file', e);
+    runApp(const ApiKeyErrorScreen());
+    return;
+  }
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -176,6 +226,7 @@ class MyApp extends StatelessWidget {
         '/heart sound': (context) => const FileUploadScreen(),
         '/notifications': (context) => const NotificationScreen(),
         '/signup': (context) => const SignupScreen(),
+        '/chatbot': (context) => const ChatbotScreen(),
       },
       home: const LoginScreen(),
     );
