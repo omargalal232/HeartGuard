@@ -18,6 +18,7 @@ import 'views/screens/file_upload_screen.dart';
 import 'services/notification_service.dart';
 import 'services/fcm_service.dart';
 import 'services/logger_service.dart';
+import 'services/sms_service.dart';
 
 final Logger _logger = Logger();
 const String _tag = 'App';
@@ -63,6 +64,10 @@ Future<void> initializeServices() async {
     // Initialize FCM service
     await FCMService().init();
     _logger.i(_tag, 'FCM service initialized');
+    
+    // Initialize SMS service
+    await SMSService().init();
+    _logger.i(_tag, 'SMS service initialized');
   } catch (e, stackTrace) {
     _logger.e(_tag, 'Error initializing services', e, stackTrace);
   }

@@ -8,6 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
 import '../../services/logger_service.dart';
+import '../../services/sms_service.dart';
 
 class MonitoringScreen extends StatefulWidget {
   const MonitoringScreen({super.key});
@@ -49,11 +50,14 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   late DatabaseReference _ecgRef;
   StreamSubscription<DatabaseEvent>? _ecgSubscription;
 
+  final SMSService _smsService = SMSService();
+
   @override
   void initState() {
     super.initState();
     _initializeFCM();
     _setupDatabaseReference();
+    _initServices();
   }
 
   void _setupDatabaseReference() {
@@ -100,6 +104,14 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       });
     } catch (e) {
       _logger.e(_tag, 'Error initializing FCM', e);
+    }
+  }
+
+  Future<void> _initServices() async {
+    try {
+      await _smsService.init();
+    } catch (e) {
+      _logger.e(_tag, 'Error initializing services', e);
     }
   }
 
@@ -275,6 +287,20 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
             heartRate: rawValue.round(),
             abnormalityType: abnormalityType,
           );
+          
+          // Send SMS to emergency contacts
+          _logger.i(_tag, 'Sending SMS alerts to emergency contacts');
+          final smsSuccess = await _smsService.sendAbnormalHeartRateAlert(
+            userId: userId,
+            heartRate: rawValue,
+            abnormalityType: abnormalityType,
+          );
+          
+          if (smsSuccess) {
+            _logger.i(_tag, 'SMS alerts sent successfully to emergency contacts');
+          } else {
+            _logger.w(_tag, 'Failed to send SMS alerts to some or all emergency contacts');
+          }
         }
       }
     } catch (e) {
