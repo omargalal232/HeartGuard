@@ -1,0 +1,24 @@
+{
+  "record_count": 374,
+  "missing_values": {
+    "average": 0,
+    "bpm": 0,
+    "max_in_period": 0,
+    "raw_value": 0,
+    "timestamp": 0,
+    "user_email": 0,
+    "id": 0,
+    "processed_timestamp": 0
+  },
+  "unique_values": {
+    "average": 313,
+    "bpm": 219,
+    "max_in_period": 154,
+    "raw_value": 154,
+    "timestamp": 1,
+    "user_email": 1,
+    "id": 374,
+    "processed_timestamp": 1
+  },
+  "negative_values": {
+    "raw_value": 

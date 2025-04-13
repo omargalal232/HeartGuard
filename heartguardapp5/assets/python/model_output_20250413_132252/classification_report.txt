@@ -1,0 +1,10 @@
+              precision    recall  f1-score   support
+
+      normal       1.00      1.00      1.00        20
+  arrhythmia       1.00      0.90      0.95        20
+        afib       0.91      1.00      0.95        20
+heart_attack       1.00      1.00      1.00        20
+
+    accuracy                           0.97        80
+   macro avg       0.98      0.97      0.97        80
+weighted avg       0.98      0.97      0.97        80
