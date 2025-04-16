@@ -18,7 +18,7 @@ import '../../models/ecg_reading.dart';
 // Services
 import '../../services/ecg_service.dart';
 import '../../services/ecg_data_service.dart';
-import 'package:heartguardapp5/services/sms_service.dart';
+import '../../services/sms_service.dart';
 
 // Unawaited utility function
 void unawaited(Future<void> future) {}
@@ -36,6 +36,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final _logger = app_logger.Logger();
   late final ECGService _ecgService;
   final EcgDataService _ecgDataService = EcgDataService();
+  final SMSService _smsService = SMSService();
   final _databaseRef = FirebaseDatabase.instance.ref();
   
   // --- State Variables ---
@@ -76,7 +77,8 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _relationController = TextEditingController();
 
-  final SMSService _smsService = SMSService();
+  // إضافة متغير لتتبع آخر وقت تم فيه إرسال رسالة تلقائية
+  DateTime? _lastAutoMessageTime;
 
   // تحسين معالجة بيانات ECG
   double _normalizeEcgValue(double value) {
@@ -169,6 +171,11 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
     // Start listening to latest ECG readings from the correct service
     _listenToLatestEcg();
+
+    // إضافة مؤقت للتحقق من الحالة كل دقيقة
+    Timer.periodic(const Duration(minutes: 1), (_) {
+      _checkAndSendAutoAlert();
+    });
   }
 
   @override
@@ -1100,57 +1107,25 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
   Future<void> _sendEmergencySMS(String phoneNumber) async {
     try {
-      // تحديد مستوى الخطورة
-      String severityLevel = "طبيعي";
-      String recommendation = "";
-      
-      if (_heartRate > 100) {
-        severityLevel = "مرتفع";
-        recommendation = "يجب زيارة الطبيب في أقرب وقت ممكن.";
-        if (_heartRate > 120) {
-          severityLevel = "خطير جداً";
-          recommendation = "يجب التوجه إلى أقرب مستشفى فوراً!";
-        }
-      } else if (_heartRate < 60) {
-        severityLevel = "منخفض";
-        recommendation = "يجب زيارة الطبيب في أقرب وقت ممكن.";
-        if (_heartRate < 50) {
-          severityLevel = "خطير جداً";
-          recommendation = "يجب التوجه إلى أقرب مستشفى فوراً!";
-        }
-      }
+      // تحضير الرسالة باستخدام الدالة المساعدة
+      final message = _smsService.formatEmergencyMessage(
+        userEmail: _userEmail ?? 'غير معروف',
+        heartRate: _heartRate,
+        bloodPressure: _bloodPressure,
+        oxygenLevel: _oxygenLevel,
+        diagnosis: _analysisResultText ?? 'غير متوفر',
+      );
 
-      // تحضير الرسالة
-      final message = '''تنبيه طوارئ! 🚨
-
-المريض: ${_userEmail ?? 'غير معروف'}
-الوقت: ${DateTime.now().toString()}
-
-المؤشرات الحيوية:
-❤️ معدل ضربات القلب: $_heartRate (مستوى $severityLevel)
-🩺 ضغط الدم: $_bloodPressure mmHg
-😷 مستوى الأكسجين: $_oxygenLevel%
-
-التشخيص: ${_analysisResultText ?? 'غير متوفر'}
-
-⚠️ $recommendation
-
-الرجاء التواصل مع المريض في أقرب وقت ممكن.
-هذه رسالة آلية من تطبيق مراقبة القلب.''';
-
-      // تنظيف رقم الهاتف
-      final cleanPhoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      
-      // إرسال الرسالة باستخدام خدمة SMS
-      final success = await _smsService.sendSMS(
-        phoneNumber: cleanPhoneNumber,
+      // إرسال الرسالة عبر واتساب
+      final success = await _smsService.sendWhatsAppMessage(
+        phoneNumber: phoneNumber,
         message: message,
       );
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم إرسال رسالة الطوارئ بنجاح'),
+            content: Text('تم إرسال رسالة الطوارئ عبر واتساب بنجاح'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1158,7 +1133,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         throw 'فشل في إرسال رسالة الطوارئ';
       }
     } catch (e) {
-      _logError('Error sending emergency SMS', e);
+      _logError('Error sending emergency WhatsApp message', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1622,6 +1597,79 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       
       default:
         return 0.5;
+    }
+  }
+
+  // دالة للتحقق من الحالة الخطرة وإرسال رسالة تلقائياً
+  void _checkAndSendAutoAlert() async {
+    // التحقق من وجود جهات اتصال للطوارئ
+    if (_emergencyContacts.isEmpty) return;
+
+    // التحقق من أن آخر رسالة تم إرسالها منذ أكثر من 15 دقيقة
+    if (_lastAutoMessageTime != null &&
+        DateTime.now().difference(_lastAutoMessageTime!) < const Duration(minutes: 15)) {
+      return;
+    }
+
+    bool isDangerous = false;
+    String reason = '';
+
+    // التحقق من معدل ضربات القلب
+    if (_heartRate > 120) {
+      isDangerous = true;
+      reason = 'ارتفاع خطير في معدل ضربات القلب ($_heartRate BPM)';
+    } else if (_heartRate < 50) {
+      isDangerous = true;
+      reason = 'انخفاض خطير في معدل ضربات القلب ($_heartRate BPM)';
+    }
+    
+    // التحقق من مستوى الأكسجين
+    if (_oxygenLevel < 90) {
+      isDangerous = true;
+      reason = 'انخفاض خطير في مستوى الأكسجين ($_oxygenLevel%)';
+    }
+
+    // التحقق من ضغط الدم
+    if (_bloodPressure > 180) {
+      isDangerous = true;
+      reason = 'ارتفاع خطير في ضغط الدم ($_bloodPressure mmHg)';
+    } else if (_bloodPressure < 90) {
+      isDangerous = true;
+      reason = 'انخفاض خطير في ضغط الدم ($_bloodPressure mmHg)';
+    }
+
+    if (isDangerous) {
+      _lastAutoMessageTime = DateTime.now();
+      
+      // إرسال رسالة لجميع جهات الاتصال
+      for (final contact in _emergencyContacts) {
+        try {
+          final message = _smsService.formatEmergencyMessage(
+            userEmail: _userEmail ?? 'غير معروف',
+            heartRate: _heartRate,
+            bloodPressure: _bloodPressure,
+            oxygenLevel: _oxygenLevel,
+            diagnosis: reason,
+          );
+
+          await _smsService.sendWhatsAppMessage(
+            phoneNumber: contact['phone'],
+            message: message,
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('تم إرسال تنبيه تلقائي: $reason'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        } catch (e) {
+          _logError('خطأ في إرسال التنبيه التلقائي', e);
+        }
+      }
     }
   }
 }
