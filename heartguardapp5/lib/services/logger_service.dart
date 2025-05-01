@@ -47,11 +47,11 @@ class Logger {
     }
   }
   
-  void logE(String tag, String message, [Object? e, StackTrace? stackTrace]) {
+  void logE(String tag, String message, [Object? error, StackTrace? stackTrace]) {
     if (_currentLogLevel <= errorLevel) {
       _log('ERROR', tag, message);
-      if (e != null) {
-        debugPrint('ERROR: $e');
+      if (error != null) {
+        debugPrint('ERROR: $error');
       }
       if (stackTrace != null) {
         debugPrint('Stack trace: $stackTrace');
@@ -84,11 +84,11 @@ class Logger {
     }
   }
   
-  void e(String message, {Object? e, StackTrace? stackTrace}) {
+  void e(String message, [Object? error, StackTrace? stackTrace]) {
     if (_currentLogLevel <= errorLevel) {
       _log('ERROR', 'Default', message);
-      if (e != null) {
-        debugPrint('ERROR: $e');
+      if (error != null) {
+        debugPrint('ERROR: $error');
       }
       if (stackTrace != null) {
         debugPrint('Stack trace: $stackTrace');
@@ -117,7 +117,7 @@ class LoggerService {
     _logger.w(message);
   }
 
-  void e(String message, {Object? e, StackTrace? stackTrace}) {
-    _logger.e(message, e: e, stackTrace: stackTrace);
+  void e(String message, {Object? error, StackTrace? stackTrace}) {
+    _logger.e(message, error, stackTrace);
   }
 } 

@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:heartguardapp05/constants/firebase_config.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -53,52 +54,52 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD4Nl9us2UBIF_9AOjYjrojJ2Fl5v7zzBE',
-    appId: '1:872244640879:android:cab6a84003effd672a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
+  static FirebaseOptions get android => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
+    appId: FirebaseConfig.appId,
+    messagingSenderId: FirebaseConfig.messagingSenderId,
+    projectId: FirebaseConfig.projectId,
+    databaseURL: FirebaseConfig.databaseURL,
+    storageBucket: FirebaseConfig.storageBucket,
   );
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyD4Nl9us2UBIF_9AOjYjrojJ2Fl5v7zzBE',
-    appId: '1:872244640879:web:0ede0a68d4c6a29c2a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
-    authDomain: 'heart-guard-1c49e.firebaseapp.com',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
+  static FirebaseOptions get web => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
+    appId: FirebaseConfig.appId,
+    messagingSenderId: FirebaseConfig.messagingSenderId,
+    projectId: FirebaseConfig.projectId,
+    authDomain: FirebaseConfig.authDomain,
+    databaseURL: FirebaseConfig.databaseURL,
+    storageBucket: FirebaseConfig.storageBucket,
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBpxM21dR9_c4hZViLaw5uZTg-MoSxwhHo',
-    appId: '1:872244640879:ios:3a10512fe7280bf82a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
-    iosBundleId: 'com.example.heartguardapp05',
+  static FirebaseOptions get ios => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
+    appId: FirebaseConfig.appId,
+    messagingSenderId: FirebaseConfig.messagingSenderId,
+    projectId: FirebaseConfig.projectId,
+    databaseURL: FirebaseConfig.databaseURL,
+    storageBucket: FirebaseConfig.storageBucket,
+    iosBundleId: FirebaseConfig.iosBundleId,
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBpxM21dR9_c4hZViLaw5uZTg-MoSxwhHo',
-    appId: '1:872244640879:ios:3a10512fe7280bf82a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
-    iosBundleId: 'com.example.heartguardapp05',
+  static FirebaseOptions get macos => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
+    appId: FirebaseConfig.appId,
+    messagingSenderId: FirebaseConfig.messagingSenderId,
+    projectId: FirebaseConfig.projectId,
+    databaseURL: FirebaseConfig.databaseURL,
+    storageBucket: FirebaseConfig.storageBucket,
+    iosBundleId: FirebaseConfig.iosBundleId,
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyD4Nl9us2UBIF_9AOjYjrojJ2Fl5v7zzBE',
-    appId: '1:872244640879:web:cab6a84003effd672a619a',
-    messagingSenderId: '872244640879',
-    projectId: 'heart-guard-1c49e',
-    authDomain: 'heart-guard-1c49e.firebaseapp.com',
-    databaseURL: 'https://heart-guard-1c49e-default-rtdb.firebaseio.com',
-    storageBucket: 'heart-guard-1c49e.firebasestorage.app',
+  static FirebaseOptions get windows => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
+    appId: FirebaseConfig.appId,
+    messagingSenderId: FirebaseConfig.messagingSenderId,
+    projectId: FirebaseConfig.projectId,
+    authDomain: FirebaseConfig.authDomain,
+    databaseURL: FirebaseConfig.databaseURL,
+    storageBucket: FirebaseConfig.storageBucket,
   );
 }

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
 import 'package:heartguardapp05/providers/theme_provider.dart';
 import 'package:heartguardapp05/navigation/app_router.dart';
 import 'package:heartguardapp05/constants/app_constants.dart';
+import 'package:heartguardapp05/services/logger_service.dart';
 import 'firebase_options.dart';
 
 // Initialize logger
-final _logger = Logger();
+final _logger = LoggerService();
 
 // Static flag to track Firebase initialization status
 bool _firebaseInitialized = false;
@@ -40,9 +40,9 @@ Future<FirebaseApp> _initializeFirebase() async {
       _logger.e("Caught other FirebaseException during initialization.", error: e);
       rethrow;
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
     // Re-throw non-Firebase exceptions
-     _logger.e("Caught generic exception during initialization.", error: e);
+     _logger.e("Caught generic exception during initialization.", error: e, stackTrace: stackTrace);
     rethrow;
   }
 }
@@ -80,7 +80,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),

@@ -39,17 +39,17 @@ class NotificationSettings {
     try {
       for (final entry in settings.entries) {
         if (!_validKeys.contains(entry.key)) {
-          _logger.e('NotificationSettings', 'Invalid setting key: ${entry.key}');
+          _logger.logE('NotificationSettings', 'Invalid setting key: ${entry.key}', null);
           return false;
         }
         
         await _prefs.setBool(entry.key, entry.value);
       }
       
-      _logger.i('NotificationSettings', 'Notification settings saved');
+      _logger.logI('NotificationSettings', 'Notification settings saved');
       return true;
     } catch (e) {
-      _logger.e('NotificationSettings', 'Failed to save notification settings', e);
+      _logger.logE('NotificationSettings', 'Failed to save notification settings', e);
       return false;
     }
   }
@@ -63,7 +63,7 @@ class NotificationSettings {
     for (final key in _validKeys) {
       final value = _prefs.getBool(key);
       if (value == null) {
-        _logger.w('NotificationSettings', 'Using default value for setting: $key');
+        _logger.logW('NotificationSettings', 'Using default value for setting: $key');
         settings[key] = _defaultSettings[key]!;
       } else {
         settings[key] = value;
@@ -79,16 +79,16 @@ class NotificationSettings {
   /// Returns true if the setting was enabled successfully, false otherwise
   Future<bool> enableSetting(String key) async {
     if (!_validKeys.contains(key)) {
-      _logger.e('NotificationSettings', 'Invalid notification setting key: $key');
+      _logger.logE('NotificationSettings', 'Invalid notification setting key: $key', null);
       return false;
     }
     
     try {
       await _prefs.setBool(key, true);
-      _logger.i('NotificationSettings', 'Notification setting enabled: $key');
+      _logger.logI('NotificationSettings', 'Notification setting enabled: $key');
       return true;
     } catch (e) {
-      _logger.e('NotificationSettings', 'Failed to enable setting: $key', e);
+      _logger.logE('NotificationSettings', 'Failed to enable setting: $key', e);
       return false;
     }
   }
@@ -99,16 +99,16 @@ class NotificationSettings {
   /// Returns true if the setting was disabled successfully, false otherwise
   Future<bool> disableSetting(String key) async {
     if (!_validKeys.contains(key)) {
-      _logger.e('NotificationSettings', 'Invalid notification setting key: $key');
+      _logger.logE('NotificationSettings', 'Invalid notification setting key: $key', null);
       return false;
     }
     
     try {
       await _prefs.setBool(key, false);
-      _logger.i('NotificationSettings', 'Notification setting disabled: $key');
+      _logger.logI('NotificationSettings', 'Notification setting disabled: $key');
       return true;
     } catch (e) {
-      _logger.e('NotificationSettings', 'Failed to disable setting: $key', e);
+      _logger.logE('NotificationSettings', 'Failed to disable setting: $key', e);
       return false;
     }
   }
@@ -119,7 +119,7 @@ class NotificationSettings {
   /// Returns true if the setting is enabled, false otherwise
   Future<bool> isSettingEnabled(String key) async {
     if (!_validKeys.contains(key)) {
-      _logger.e('NotificationSettings', 'Invalid notification setting key: $key');
+      _logger.logE('NotificationSettings', 'Invalid notification setting key: $key', null);
       return false;
     }
     
