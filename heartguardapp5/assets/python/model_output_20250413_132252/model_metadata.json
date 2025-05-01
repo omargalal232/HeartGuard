@@ -1,0 +1,51 @@
+{
+  "model_name": "ECG Classification Model",
+  "version": "2.0.0",
+  "created_at": "2025-04-13",
+  "description": "TFLite model for ECG classification",
+  "input_features": [
+    "heart_rate",
+    "hrv_sdnn",
+    "hrv_rmssd",
+    "qrs_duration",
+    "qrs_amplitude",
+    "st_elevation",
+    "st_slope"
+  ],
+  "output_classes": [
+    "normal",
+    "arrhythmia",
+    "afib",
+    "heart_attack"
+  ],
+  "normalization": {
+    "heart_rate": {
+      "mean": 109.96526540972198,
+      "std": 35.28668473688175
+    },
+    "hrv_sdnn": {
+      "mean": 75.17338985505884,
+      "std": 34.28791099747134
+    },
+    "hrv_rmssd": {
+      "mean": 57.06763725259785,
+      "std": 27.92569252025891
+    },
+    "qrs_duration": {
+      "mean": 107.58222427204142,
+      "std": 18.07744255000125
+    },
+    "qrs_amplitude": {
+      "mean": 0.9169094161377461,
+      "std": 0.22743000271854535
+    },
+    "st_elevation": {
+      "mean": 0.13684420568829248,
+      "std": 0.13860358016090257
+    },
+    "st_slope": {
+      "mean": 0.05559628111298558,
+      "std": 0.08929828037642026
+    }
+  }
+}

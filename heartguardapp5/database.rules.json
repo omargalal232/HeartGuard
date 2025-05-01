@@ -1,0 +1,49 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "health_data": {
+          ".indexOn": ["timestamp"]
+        },
+        "profile": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        },
+        "emergency_contacts": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        },
+        "doctorPhone": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        },
+        "emergencyContacts": {
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
+        }
+      }
+    },
+    "emergency_alerts": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        ".indexOn": ["timestamp"]
+      }
+    },
+    "ecg_data": {
+      ".indexOn": ["timestamp"],
+      ".read": "auth != null",
+      ".write": "true"
+    },
+    "user_profiles": {
+      "$uid": {
+        ".read": "$uid === auth.uid || root.child('users').child($uid).child('authorized_viewers').child(auth.uid).exists()",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}
