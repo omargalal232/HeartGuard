@@ -4,15 +4,46 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'logger_service.dart';
+import 'package:flutter/foundation.dart';
 
 class SMSService {
   static final SMSService _instance = SMSService._internal();
   factory SMSService() => _instance;
-  SMSService._internal();
+  
+  // Private constructor for singleton
+  SMSService._internal() :
+    _firestore = FirebaseFirestore.instance,
+    _logger = Logger(),
+    _httpClient = http.Client();
+  
+  // Factory constructor for testing
+  @visibleForTesting
+  factory SMSService.test({
+    required FirebaseFirestore firestore,
+    required Logger logger,
+    required http.Client httpClient,
+  }) {
+    return SMSService._test(
+      firestore: firestore,
+      logger: logger,
+      httpClient: httpClient,
+    );
+  }
+  
+  // Test constructor
+  SMSService._test({
+    required FirebaseFirestore firestore,
+    required Logger logger,
+    required http.Client httpClient,
+  }) :
+    _firestore = firestore,
+    _logger = logger,
+    _httpClient = httpClient;
 
-  final Logger _logger = Logger();
+  final FirebaseFirestore _firestore;
+  final Logger _logger;
+  final http.Client _httpClient;
   static const String _tag = 'SMSService';
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Twilio credentials - should be stored in .env file
   String? get _twilioAccountSid => dotenv.env['TWILIO_ACCOUNT_SID'];
@@ -165,7 +196,7 @@ class SMSService {
       };
 
       // Make HTTP request to Twilio API
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse('https://api.twilio.com/2010-04-01/Accounts/$_twilioAccountSid/Messages.json'),
         headers: {
           'Authorization': auth,
