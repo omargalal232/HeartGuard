@@ -2,8 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/logger_service.dart';
 import '../../constants/app_constants.dart';
+import '../../models/profile_model.dart';
+import '../../controllers/profile_controller.dart';
+import '../../services/firestore_service.dart';
+import '../../controllers/auth_controller.dart';
+import '../../services/firebase_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? error;
@@ -24,9 +30,9 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordController = TextEditingController();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
-  final _auth = FirebaseAuth.instance;
-  final Logger _logger = Logger();
-  static const String _tag = 'LoginScreen';
+  final _logger = LoggerService();
+  late final AuthController _authController;
+  late final ProfileController _profileController;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -42,12 +48,29 @@ class _LoginScreenState extends State<LoginScreen>
     _setupAnimations();
     _setupFormValidation();
     _loadSavedEmail();
+    _initializeControllers();
+    _checkLastSignedInEmail();
 
     if (widget.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showError(widget.error!);
       });
     }
+  }
+
+  void _initializeControllers() {
+    _authController = AuthController(
+      authService: FirebaseAuthService(auth: FirebaseAuth.instance),
+      logger: _logger,
+    );
+    _profileController = ProfileController(
+      firestoreService: FirestoreService(
+        firestore: FirebaseFirestore.instance,
+        auth: FirebaseAuth.instance,
+        logger: _logger,
+      ),
+      logger: _logger,
+    );
   }
 
   void _setupAnimations() {
@@ -76,6 +99,19 @@ class _LoginScreenState extends State<LoginScreen>
     _animationController.forward();
   }
 
+  Future<void> _checkLastSignedInEmail() async {
+    try {
+      final lastEmail = await _authController.getLastSignedInEmail();
+      if (lastEmail != null && mounted) {
+        setState(() {
+          _emailController.text = lastEmail;
+        });
+      }
+    } catch (e) {
+      _logger.e('Error checking last signed in email', e);
+    }
+  }
+
   Future<void> _loadSavedEmail() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -87,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
         });
       }
     } catch (e) {
-      _logger.logE(_tag, 'Error loading saved email', e);
+      _logger.e('Error loading saved email', e);
     }
   }
 
@@ -100,7 +136,45 @@ class _LoginScreenState extends State<LoginScreen>
         await prefs.remove('saved_email');
       }
     } catch (e) {
-      _logger.logE(_tag, 'Error saving email', e);
+      _logger.e('Error saving email', e);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !_validateEmail(email)) {
+      _showError('Please enter a valid email address');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authController.sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset email sent to $email'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError(e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -152,14 +226,45 @@ class _LoginScreenState extends State<LoginScreen>
 
       await _saveEmail();
 
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      _logger.i('Attempting to sign in with email: $email');
+      await _authController.signIn(email, password);
+
+      // Get or create user profile
+      _logger.i('Fetching user profile...');
+      ProfileModel? profile = await _profileController.getCurrentProfile();
+      if (profile == null) {
+        _logger.i('No existing profile found, creating new profile...');
+        final user = _authController.getCurrentUser();
+        if (user != null) {
+          profile = ProfileModel(
+            uid: user.uid,
+            email: email,
+            name: user.displayName ?? '',
+            phoneNumber: user.phoneNumber ?? '',
+            dateOfBirth: DateTime.now(),
+            gender: 'Not specified',
+            height: 0,
+            weight: 0,
+            bloodType: 'Unknown',
+            medicalConditions: [],
+            medications: [],
+            allergies: [],
+            emergencyContacts: [],
+          );
+          
+          try {
+            await _profileController.createProfile(profile);
+            _logger.i('New profile created successfully');
+          } catch (e) {
+            _logger.e('Error creating profile: $e');
+          }
+        }
+      } else {
+        _logger.i('Existing profile found');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Successfully signed in!'),
@@ -176,42 +281,11 @@ class _LoginScreenState extends State<LoginScreen>
           Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
         }
       }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'user-not-found':
-          message = 'No account found with this email. Please sign up first.';
-          break;
-        case 'wrong-password':
-          message = 'Incorrect password. Please try again.';
-          break;
-        case 'invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'user-disabled':
-          message = 'This account has been disabled. Please contact support.';
-          break;
-        case 'too-many-requests':
-          message = 'Too many attempts. Please try again later.';
-          break;
-        case 'network-request-failed':
-          message = 'Network error. Please check your connection.';
-          break;
-        case 'invalid-input':
-          message = e.message ?? 'Please check your input and try again.';
-          break;
-        default:
-          message = e.message ?? 'An error occurred during sign in.';
-      }
-      _logger.logE(_tag, 'Sign in error: ${e.code}', e);
-      _showError(message);
-
-      _passwordController.clear();
-      _validateForm();
-      _passwordFocusNode.requestFocus();
     } catch (e) {
-      _logger.logE(_tag, 'Unexpected sign in error', e);
-      _showError('An unexpected error occurred. Please try again.');
+      _logger.e('Error during sign in', e);
+      if (mounted) {
+        _showError(e.toString());
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -286,51 +360,74 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      focusNode: _passwordFocusNode,
-      obscureText: _obscurePassword,
-      textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _signIn(),
-      decoration: InputDecoration(
-        labelText: 'Password',
-        hintText: 'Enter your password',
-        prefixIcon: const Icon(Icons.lock_outlined),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
-            color: Theme.of(context).colorScheme.primary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _passwordController,
+          focusNode: _passwordFocusNode,
+          obscureText: _obscurePassword,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _signIn(),
+          decoration: InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+            prefixIcon: const Icon(Icons.lock_outlined),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+                _passwordFocusNode.requestFocus();
+              },
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            errorMaxLines: 2,
           ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-            _passwordFocusNode.requestFocus();
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your password';
+            }
+            if (value.length < 6) {
+              return 'Password must be at least 6 characters';
+            }
+            return null;
           },
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.primary,
-            width: 2,
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _isLoading ? null : _resetPassword,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 0),
+            ),
+            child: const Text(
+              'Forgot Password?',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ),
-        errorMaxLines: 2,
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your password';
-        }
-        if (value.length < 6) {
-          return 'Password must be at least 6 characters';
-        }
-        return null;
-      },
+      ],
     );
   }
 

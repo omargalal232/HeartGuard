@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/profile_controller.dart';
 import '../../models/profile_model.dart';
+import '../../services/firestore_service.dart';
+import '../../services/logger_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,7 +14,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final ProfileController _profileController = ProfileController();
+  late final ProfileController _profileController;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   bool _isLoading = true;
@@ -21,6 +24,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    final firestore = FirebaseFirestore.instance;
+    final logger = LoggerService();
+    _profileController = ProfileController(
+      firestoreService: FirestoreService(
+        firestore: firestore,
+        auth: FirebaseAuth.instance,
+        logger: logger,
+      ),
+      logger: logger,
+    );
     _loadProfile();
   }
 
@@ -37,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _profile = profile;
           if (profile?.name != null) {
-            _nameController.text = profile!.name!;
+            _nameController.text = profile!.name;
           }
           _isLoading = false;
         });
@@ -65,7 +78,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         uid: user.uid,
         email: user.email!,
         name: _nameController.text.trim(),
-        lastActive: DateTime.now(),
+        phoneNumber: _profile?.phoneNumber ?? '',
+        dateOfBirth: _profile?.dateOfBirth ?? DateTime.now(),
+        gender: _profile?.gender ?? 'Not specified',
+        height: _profile?.height ?? 0,
+        weight: _profile?.weight ?? 0,
+        bloodType: _profile?.bloodType ?? 'Unknown',
+        medicalConditions: _profile?.medicalConditions ?? [],
+        medications: _profile?.medications ?? [],
+        allergies: _profile?.allergies ?? [],
+        emergencyContacts: _profile?.emergencyContacts ?? [],
       );
 
       await _profileController.updateProfile(updatedProfile);

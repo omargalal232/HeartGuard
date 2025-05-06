@@ -43,12 +43,13 @@ class AppConstants {
   static const String appTitle = 'HeartGuard';
   static const String logoPath = 'assets/img/logo.png';
   static const String baseUrl = 'https://heart-guard-1c49e-default-rtdb.firebaseio.com';
-  static const String firebaseServerKey = 'AIzaSyD4Nl9us2UBIF_9AOjYjrojJ2Fl5v7zzBE';  // Using the Android API key from firebase_options.dart
+  static const String firebaseServerKey = 'YOUR_FIREBASE_SERVER_KEY'; // Replace with actual key
 
   // Settings keys
   static const String notificationsEnabledKey = 'notifications_enabled';
   static const String locationEnabledKey = 'location_enabled';
   static const String languageKey = 'language';
+  static const String smsEnabledKey = 'sms_enabled';
 
   // Additional routes
   static const String aboutRoute = '/about';

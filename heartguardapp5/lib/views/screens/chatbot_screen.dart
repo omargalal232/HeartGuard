@@ -221,9 +221,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No emergency contact number available. Please set an emergency contact.'),
+            content: const Text('No emergency contact number available. Please set an emergency contact.'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 5),
+            duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: 'Set Contact',
               textColor: const Color.fromARGB(255, 237, 254, 2),

@@ -5,11 +5,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/app_constants.dart';
 import 'package:logger/logger.dart' as logger;
 import 'package:flutter/foundation.dart';
+import 'package:heartguardapp05/services/logger_service.dart';
+
+class ECGAnalysisResult {
+  final bool isNormal;
+  final String? anomalyType;
+
+  ECGAnalysisResult({
+    required this.isNormal,
+    this.anomalyType,
+  });
+}
 
 class ECGAnalysisService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _logger = logger.Logger();
+  final LoggerService _loggerService;
+
+  ECGAnalysisService({required LoggerService logger}) : _loggerService = logger;
 
   // Extract features from ECG signal with error handling
   Future<Map<String, dynamic>> extractFeatures(List<double> ecgSignal) async {
@@ -66,7 +80,7 @@ class ECGAnalysisService {
       
       // Simple peak detection algorithm
       final List<int> peaks = [];
-      final windowSize = 25; // Window size to detect local maxima
+      const windowSize = 25; // Window size to detect local maxima
       
       // Need at least 2*windowSize points for peak detection
       if (ecgSignal.length < 2 * windowSize) {
@@ -372,5 +386,48 @@ class ECGAnalysisService {
       _logger.e('Error getting ECG analysis history: $e');
       return [];
     }
+  }
+
+  ECGAnalysisResult analyzeECGData(List<double> ecgData) {
+    if (ecgData.isEmpty) {
+      _loggerService.e('Empty ECG data provided');
+      throw ArgumentError('ECG data cannot be empty');
+    }
+
+    // Simple analysis: check if values are within normal range
+    final isNormal = ecgData.every((value) => 
+      value >= -0.5 && value <= 0.5);
+
+    if (isNormal) {
+      _loggerService.i('Normal ECG rhythm detected');
+      return ECGAnalysisResult(isNormal: true);
+    } else {
+      _loggerService.w('Abnormal ECG rhythm detected');
+      return ECGAnalysisResult(
+        isNormal: false,
+        anomalyType: 'High amplitude',
+      );
+    }
+  }
+
+  int calculateHeartRate(List<double> ecgData) {
+    if (ecgData.isEmpty) {
+      _loggerService.e('Empty ECG data provided for heart rate calculation');
+      throw ArgumentError('ECG data cannot be empty');
+    }
+
+    // Simple heart rate calculation based on peaks
+    int peakCount = 0;
+    for (int i = 1; i < ecgData.length - 1; i++) {
+      if (ecgData[i] > ecgData[i-1] && ecgData[i] > ecgData[i+1]) {
+        peakCount++;
+      }
+    }
+
+    // Assuming 1000ms sampling rate
+    final heartRate = (peakCount * 60).clamp(60, 100);
+    _loggerService.i('Calculated heart rate: $heartRate bpm');
+    
+    return heartRate;
   }
 } 

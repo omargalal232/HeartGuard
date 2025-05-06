@@ -48,7 +48,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
         _contacts = List<Map<String, dynamic>>.from(data['emergencyContacts'] ?? []);
       });
     } catch (e) {
-      _logger.e('Error loading contacts', e: e);
+      _logger.e('Error loading contacts: ${e.toString()}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load contacts')),
@@ -83,7 +83,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
         );
       }
     } catch (e) {
-      _logger.e('Error adding contact', e: e);
+      _logger.e('Error adding contact: ${e.toString()}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add contact')),
@@ -109,7 +109,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
         );
       }
     } catch (e) {
-      _logger.e('Error removing contact', e: e);
+      _logger.e('Error removing contact', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to remove contact')),

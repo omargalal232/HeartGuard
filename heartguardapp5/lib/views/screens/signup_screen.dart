@@ -62,9 +62,17 @@ class _SignupScreenState extends State<SignupScreen> {
         final profile = ProfileModel(
           uid: userCredential.user!.uid,
           email: email,
-          name: null,
-          photoUrl: null,
-          lastActive: DateTime.now(),
+          name: '',
+          phoneNumber: '',
+          dateOfBirth: DateTime.now(),
+          gender: 'Not specified',
+          height: 0,
+          weight: 0,
+          bloodType: 'Unknown',
+          medicalConditions: [],
+          medications: [],
+          allergies: [],
+          emergencyContacts: [],
         );
 
         await _firestore

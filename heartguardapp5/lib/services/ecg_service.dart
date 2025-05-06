@@ -35,7 +35,7 @@ class OptimizedECGService {
   // Analysis cache to prevent frequent reanalysis
   final Map<String, Map<String, dynamic>> _analysisCache = {};
   final Map<String, DateTime> _analysisTimes = {};
-  final Duration _analysisExpiration = const Duration(seconds: 30);
+  static const _analysisExpiration = Duration(seconds: 30);
   
   // تهيئة النموذج باستخدام التنزيل المسبق (prefetch)
   bool _isModelInitialized = false;
@@ -225,8 +225,8 @@ class OptimizedECGService {
   List<double> _calculateHrvFeatures(List<double> values) {
     // في تطبيق حقيقي، يتم هنا حساب HRV من فواصل RR
     // هنا نستخدم قيم تقريبية لأغراض المثال
-    final sdnn = 50.0; // انحراف معياري لفواصل RR
-    final rmssd = 30.0; // جذر متوسط مربع فروق فواصل RR المتعاقبة
+    const sdnn = 50.0; // انحراف معياري لفواصل RR
+    const rmssd = 30.0; // جذر متوسط مربع فروق فواصل RR المتعاقبة
     return [sdnn, rmssd];
   }
   

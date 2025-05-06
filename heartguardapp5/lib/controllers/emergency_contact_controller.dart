@@ -1,64 +1,68 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../models/emergency_contact.dart';
+import 'package:heartguardapp05/services/firestore_service.dart';
+import 'package:heartguardapp05/services/logger_service.dart';
 
 class EmergencyContactController {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService;
+  final LoggerService _logger;
 
-  // Get user's emergency contacts
-  Stream<List<EmergencyContact>> getEmergencyContacts() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value([]);
+  EmergencyContactController({
+    required FirestoreService firestoreService,
+    required LoggerService logger,
+  })  : _firestoreService = firestoreService,
+        _logger = logger;
 
-    return _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('emergencyContacts')
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => EmergencyContact.fromMap(doc.data(), doc.id))
-          .toList();
-    });
+  Future<void> addContact(Map<String, dynamic> contact) async {
+    try {
+      await _firestoreService.addDocument('emergency_contacts', contact);
+      _logger.i('Emergency contact added successfully');
+    } catch (e) {
+      _logger.e('Error adding emergency contact: $e');
+      rethrow;
+    }
   }
 
-  // Add new emergency contact
-  Future<void> addEmergencyContact(EmergencyContact contact) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('emergencyContacts')
-        .add(contact.toMap());
+  Future<void> updateContact(
+    String contactId,
+    Map<String, dynamic> contact,
+  ) async {
+    try {
+      await _firestoreService.updateDocument(
+        'emergency_contacts',
+        contactId,
+        contact,
+      );
+      _logger.i('Emergency contact updated successfully: $contactId');
+    } catch (e) {
+      _logger.e('Error updating emergency contact: $e');
+      rethrow;
+    }
   }
 
-  // Delete emergency contact
-  Future<void> deleteEmergencyContact(String contactId) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('emergencyContacts')
-        .doc(contactId)
-        .delete();
+  Future<void> deleteContact(String contactId) async {
+    try {
+      await _firestoreService.deleteDocument('emergency_contacts', contactId);
+      _logger.i('Emergency contact deleted successfully: $contactId');
+    } catch (e) {
+      _logger.e('Error deleting emergency contact: $e');
+      rethrow;
+    }
   }
 
-  // Update emergency contact
-  Future<void> updateEmergencyContact(
-      String contactId, EmergencyContact contact) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('emergencyContacts')
-        .doc(contactId)
-        .update(contact.toMap());
+  Future<Map<String, dynamic>?> getContact(String contactId) async {
+    try {
+      final contact = await _firestoreService.getDocument(
+        'emergency_contacts',
+        contactId,
+      );
+      if (contact == null) {
+        _logger.w('Emergency contact not found: $contactId');
+      } else {
+        _logger.i('Emergency contact retrieved successfully: $contactId');
+      }
+      return contact;
+    } catch (e) {
+      _logger.e('Error getting emergency contact: $e');
+      rethrow;
+    }
   }
 } 

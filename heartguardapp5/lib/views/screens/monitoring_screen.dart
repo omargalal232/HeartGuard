@@ -631,7 +631,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 color: Colors.red,
                 barWidth: 2,
                 isStrokeCapRound: true,
-                dotData: FlDotData(show: false),
+                dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
                   color: Colors.red.withValues(alpha: 0.1 * 255),
@@ -657,7 +657,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 );
               },
             ),
-            titlesData: FlTitlesData(
+            titlesData: const FlTitlesData(
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
@@ -920,7 +920,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   void _logInfo(String message) => _logger.i(message);
   void _logWarning(String message) => _logger.w(message);
   void _logError(String message, [Object? error]) {
-    _logger.e(message, e: error);
+    _logger.e(message, error);
   }
 
   Future<void> _refreshData() async {
@@ -1394,10 +1394,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                         children: [
                           const Text(
                             'Live ECG',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1480,10 +1477,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
               children: [
                 const Text(
                   'Health Metrics',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 Icon(Icons.monitor_heart, color: Colors.teal.shade600)
               ],
