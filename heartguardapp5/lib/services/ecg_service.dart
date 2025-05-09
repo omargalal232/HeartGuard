@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:logger/logger.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import '../models/ecg_reading.dart';
 import 'tflite_service.dart';
@@ -293,14 +293,13 @@ class OptimizedECGService {
 
 /// Redirects to OptimizedECGService to provide the same functionality
 class ECGService {
-  final FirebaseFirestore _firestore;
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
   final Logger _logger;
   final OptimizedECGService _optimizedService;
 
   // Private constructor
   ECGService._internal() 
-    : _firestore = FirebaseFirestore.instance,
-      _logger = Logger(),
+    : _logger = Logger(),
       _optimizedService = OptimizedECGService();
 
   // Singleton instance
@@ -336,20 +335,194 @@ class ECGService {
     return await _optimizedService.reloadTfliteModel();
   }
 
+  /// Fetches ECG readings for a specific user from Realtime Database
+  /// 
+  /// @param userEmail The email of the user to fetch readings for
+  /// @param limit Optional limit on the number of readings to fetch
+  /// @return List of EcgReading objects sorted by timestamp (newest first)
+  Future<List<EcgReading>> getEcgReadingsForUser(String userEmail, {int limit = 50}) async {
+    try {
+      _logger.i('Fetching ECG readings for user: $userEmail, limit: $limit');
+      
+      // Clean the email to use as a key if needed 
+      // Firebase doesn't allow '.' in keys, so emails are often stored with '.' replaced by ','
+      final cleanEmail = userEmail.replaceAll('.', ',');
+      _logger.d('Using clean email for query: $cleanEmail');
+      
+      List<EcgReading> readings = [];
+      
+      // First, try to fetch all ecg_data and filter by user_email
+      _logger.d('Attempting to query ecg_data node...');
+      try {
+        final reference = _database.ref('ecg_data');
+        final snapshot = await reference.get();
+        _logger.d('ecg_data query result - Has data: ${snapshot.exists}, Value type: ${snapshot.value.runtimeType}');
+        
+        if (snapshot.exists && snapshot.value != null && snapshot.value is Map) {
+          Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+          
+          // Process each entry and add it to readings if it matches the user email
+          data.forEach((key, value) {
+            try {
+              if (value is Map) {
+                final Map<String, dynamic> readingMap = Map<String, dynamic>.from(value);
+                
+                // Add the key as the ID
+                readingMap['id'] = key;
+                
+                // Check if this reading belongs to the requested user
+                final readingEmail = readingMap['user_email'] as String?;
+                
+                // Match either exact email or cleaned email format
+                if (readingEmail == userEmail || readingEmail == cleanEmail) {
+                  readings.add(EcgReading.fromMap(readingMap));
+                }
+              }
+            } catch (e) {
+              _logger.w('Error processing reading $key: $e');
+            }
+          });
+          
+          _logger.i('Found ${readings.length} readings in ecg_data for user: $userEmail');
+        }
+      } catch (e) {
+        _logger.w('Error querying ecg_data node: $e');
+      }
+      
+      // If no readings found, try the other approaches as fallback
+      if (readings.isEmpty) {
+        _logger.d('No readings found in ecg_data, trying alternative queries...');
+        
+        // Try querying by user_email field in ecg_readings node
+        try {
+          final reference = _database.ref('ecg_readings');
+          final query = reference
+              .orderByChild('user_email')
+              .equalTo(userEmail)
+              .limitToLast(limit);
+          
+          final snapshot = await query.get();
+          
+          if (snapshot.exists && snapshot.value != null) {
+            _logger.i('Found readings in ecg_readings node');
+            readings = _processSnapshot(snapshot);
+          }
+        } catch (e) {
+          _logger.w('Error querying ecg_readings node: $e');
+        }
+      }
+      
+      // If we found readings, sort them
+      if (readings.isNotEmpty) {
+        // Sort by timestamp descending (newest first)
+        readings.sort((a, b) {
+          final aTime = a.timestamp is int ? a.timestamp as int : 0;
+          final bTime = b.timestamp is int ? b.timestamp as int : 0;
+          return bTime.compareTo(aTime);
+        });
+        
+        // Limit to the requested number if needed
+        if (readings.length > limit) {
+          readings = readings.sublist(0, limit);
+        }
+      }
+      
+      _logger.i('Retrieved ${readings.length} ECG readings for user: $userEmail');
+      return readings;
+    } catch (e, stackTrace) {
+      _logger.e('Error fetching ECG readings', error: e, stackTrace: stackTrace);
+      throw Exception('Failed to load ECG readings: $e');
+    }
+  }
+  
+  /// Process a Firebase DataSnapshot into a list of EcgReading objects
+  List<EcgReading> _processSnapshot(DataSnapshot snapshot) {
+    final List<EcgReading> readings = [];
+    
+    try {
+      if (snapshot.value is Map) {
+        final Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        
+        data.forEach((key, value) {
+          try {
+            if (value is Map) {
+              final Map<String, dynamic> readingMap = Map<String, dynamic>.from(value);
+              // Add the key as the ID if not present
+              readingMap['id'] ??= key;
+              readings.add(EcgReading.fromMap(readingMap));
+            } else {
+              _logger.w('Invalid data format for reading $key: $value');
+            }
+          } catch (e) {
+            _logger.w('Error parsing reading $key: $e');
+          }
+        });
+      } else if (snapshot.value is List) {
+        // Handle array data (rare, but possible)
+        final List<dynamic> dataList = snapshot.value as List<dynamic>;
+        
+        for (int i = 0; i < dataList.length; i++) {
+          final value = dataList[i];
+          if (value != null && value is Map) {
+            try {
+              final Map<String, dynamic> readingMap = Map<String, dynamic>.from(value);
+              // Use index as ID if not present
+              readingMap['id'] ??= i.toString();
+              readings.add(EcgReading.fromMap(readingMap));
+            } catch (e) {
+              _logger.w('Error parsing reading at index $i: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      _logger.e('Error processing snapshot: $e');
+    }
+    
+    return readings;
+  }
+
   Future<Map<String, dynamic>?> getCurrentReading() async {
     try {
-      // Get the latest reading from Firestore
-      final snapshot = await _firestore
-          .collection('ecg_readings')
-          .orderBy('timestamp', descending: true)
-          .limit(1)
-          .get();
+      // Get the latest reading from Realtime Database
+      final snapshot = await _database.ref('ecg_readings').orderByChild('timestamp').limitToLast(1).get();
 
-      if (snapshot.docs.isEmpty) {
+      if (snapshot.value == null) {
+        _logger.i('No current ECG reading available');
         return null;
       }
 
-      return snapshot.docs.first.data();
+      // Handle different data structures
+      if (snapshot.value is Map) {
+        final Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        
+        // Handle empty data
+        if (data.isEmpty) {
+          _logger.i('Empty data returned for current reading');
+          return null;
+        }
+        
+        try {
+          // Get the first (and only) entry
+          final firstKey = data.keys.first;
+          final value = data[firstKey];
+          
+          if (value is Map) {
+            final readingData = value;
+            // Convert to the expected Map<String, dynamic> format
+            return Map<String, dynamic>.from(readingData);
+          } else {
+            _logger.w('Invalid data format for current reading: $value');
+            return null;
+          }
+        } catch (e) {
+          _logger.w('Error parsing current reading: $e');
+          return null;
+        }
+      } else {
+        _logger.w('Unexpected data format received: ${snapshot.value.runtimeType}');
+        return null;
+      }
     } catch (e) {
       _logger.e('Error getting current reading', error: e);
       return null;

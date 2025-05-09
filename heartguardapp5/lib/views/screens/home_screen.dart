@@ -43,6 +43,12 @@ class HomeScreen extends StatelessWidget {
           ),
           _buildFeatureCard(
             context,
+            'Medical Records',
+            Icons.medical_information,
+            AppConstants.medicalRecordsRoute,
+          ),
+          _buildFeatureCard(
+            context,
             'Profile',
             Icons.person,
             AppConstants.profileRoute,

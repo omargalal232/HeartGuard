@@ -9,6 +9,7 @@ class AppConstants {
   static const String chatbotRoute = '/chatbot';
   static const String profileRoute = '/profile';
   static const String settingsRoute = '/settings';
+  static const String medicalRecordsRoute = '/medical-records';
 
   // Firebase collections
   static const String usersCollection = 'users';

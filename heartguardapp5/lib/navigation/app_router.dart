@@ -8,6 +8,10 @@ import '../views/screens/monitoring_screen.dart';
 import '../views/screens/settings_screen.dart';
 import '../views/screens/chatbot_screen.dart';
 import '../views/screens/emergency_contacts_screen.dart';
+import '../views/screens/medical_records_list_screen.dart';
+import '../views/medical_record_page.dart';
+import '../models/profile_model.dart';
+import '../models/ecg_reading.dart';
 
 
 class AppRouter {
@@ -38,6 +42,29 @@ class AppRouter {
 
       case AppConstants.emergencyContactsRoute:
         return MaterialPageRoute(builder: (_) => const EmergencyContactsScreen());
+
+      case AppConstants.medicalRecordsRoute:
+        return MaterialPageRoute(builder: (_) => const MedicalRecordsListScreen());
+        
+      case MedicalRecordPage.routeName:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args != null &&
+            args['patientProfile'] is ProfileModel &&
+            args['ecgReading'] is EcgReading) {
+          return MaterialPageRoute(
+            builder: (_) => MedicalRecordPage(
+              patientProfile: args['patientProfile'] as ProfileModel,
+              ecgReading: args['ecgReading'] as EcgReading,
+            ),
+          );
+        }
+        // If args are not valid, navigate to an error page or show a dialog
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: const Center(child: Text('Invalid arguments for Medical Record')),
+          ),
+        );
 
       default:
         return MaterialPageRoute(

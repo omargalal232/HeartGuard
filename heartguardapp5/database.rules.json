@@ -39,6 +39,11 @@
       ".read": "auth != null",
       ".write": "true"
     },
+    "ecg_readings": {
+      ".indexOn": ["user_email", "timestamp"],
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "user_profiles": {
       "$uid": {
         ".read": "$uid === auth.uid || root.child('users').child($uid).child('authorized_viewers').child(auth.uid).exists()",
