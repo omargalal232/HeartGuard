@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SMSService {
   final Logger _logger = Logger();
@@ -47,6 +48,40 @@ class SMSService {
       }
     } catch (e, stackTrace) {
       _logger.e('خطأ في إرسال رسالة واتساب', error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  // Method to send SMS using the SMS URI scheme
+  Future<bool> sendSMS({
+    required String phoneNumber,
+    required String message,
+  }) async {
+    try {
+      // Clean phone number
+      String targetPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+      
+      if (targetPhone.isEmpty) {
+        _logger.e('Cannot send SMS: invalid phone number');
+        return false;
+      }
+      
+      _logger.d('Attempting to send SMS to: $targetPhone');
+      
+      // Use URI scheme to open default SMS app
+      final uri = Uri.parse('sms:$targetPhone?body=${Uri.encodeComponent(message)}');
+      
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        // Note: We can't guarantee message was actually sent, only that SMS app opened
+        _logger.i('SMS app opened successfully for: $targetPhone');
+        return true;
+      } else {
+        _logger.e('Cannot launch SMS app for: $targetPhone');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      _logger.e('Error sending SMS', error: e, stackTrace: stackTrace);
       return false;
     }
   }
