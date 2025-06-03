@@ -13,19 +13,15 @@ import '../../services/logger_service.dart' as app_logger;
 
 
 // Models
-import '../../models/ecg_reading.dart';
+// import '../../models/ecg_reading.dart'; // Unused import
 
 // Services
 import '../../services/ecg_service.dart';
-import '../../services/ecg_data_service.dart';
+// import '../../services/ecg_data_service.dart'; // Unused import
 import '../../services/sms_service.dart';
 
 // Unawaited utility function
 void unawaited(Future<void> future) {}
-
-// Add at the top level, after imports and before class declarations
-// Message sending types enum
-enum MessageType { sms, whatsapp, both }
 
 class MonitoringScreen extends StatefulWidget {
   const MonitoringScreen({super.key});
@@ -39,7 +35,6 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _logger = app_logger.Logger();
   late final ECGService _ecgService;
-  final EcgDataService _ecgDataService = EcgDataService();
   final SMSService _smsService = SMSService();
   final _databaseRef = FirebaseDatabase.instance.ref();
   
@@ -68,9 +63,6 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   String? _doctorPhone;
   List<Map<String, String>> _emergencyContacts = [];
 
-  // --- NEW: Subscription for EcgDataService ---
-  StreamSubscription<EcgReading?>? _latestEcgReadingSubscription;
-
   // Add ECG chart data properties
   final List<FlSpot> _ecgChartData = [];
   final int _maxDataPoints = 100; // Maximum number of points to show on chart
@@ -82,40 +74,58 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   final TextEditingController _relationController = TextEditingController();
 
   // إضافة متغير لتتبع آخر وقت تم فيه إرسال رسالة تلقائية
-  DateTime? _lastAutoMessageTime;
+  // DateTime? _lastAutoMessageTime; // Unused field
 
-  // Add message status tracking
-  final Map<String, String> _messageStatus = {};
-  
-  // Add this property to track retry attempts
-  final int _maxRetryAttempts = 3;
+  // Add these constants at the top of the class
+  static const Duration _monitoringInterval = Duration(seconds: 1);
+  static const Duration _reconnectionDelay = Duration(seconds: 3);
+  static const int _maxReconnectionAttempts = 5;
+  static const Duration _dataRefreshInterval = Duration(minutes: 1);
+
+  // Add these variables for better state management
+  bool _isReconnecting = false;
+  int _reconnectionAttempts = 0;
+  DateTime? _lastDataUpdate;
+  Timer? _reconnectionTimer;
+
+  // تحسين معالجة بيانات ECG
+  double _normalizeEcgValue(double value) {
+    // تحويل القيم الخام إلى نطاق مناسب للرسم البياني
+    const double inputMin = 0;
+    const double inputMax = 4095;
+    const double outputMin = -0.5;
+    const double outputMax = 0.5;
+    
+    // تطبيع القيمة إلى النطاق [-0.5, 0.5]
+    return ((value - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin) + outputMin;
+  }
 
   // تحديث المؤشرات الصحية بناءً على BPM
-  void _updateHealthMetrics(double bpm) {
-    if (!mounted) return;
-    
-    setState(() {
-      _heartRate = bpm.round();
-      
-      // Update blood pressure based on BPM
-      if (bpm < 60) {
-        _bloodPressure = 90; // Low pressure
-      } else if (bpm > 100) {
-        _bloodPressure = 140; // High pressure
-      } else {
-        _bloodPressure = 120; // Normal pressure
-      }
-      
-      // Update oxygen level based on BPM
-      if (bpm > 120) {
-        _oxygenLevel = 92; // Decreased with high BPM
-      } else if (bpm < 60) {
-        _oxygenLevel = 95; // Slight decrease with low BPM
-      } else {
-        _oxygenLevel = 98; // Normal
-      }
-    });
-  }
+  // void _updateHealthMetrics(double bpm) { // Unused method
+  //   if (!mounted) return;
+  //   
+  //   setState(() {
+  //     _heartRate = bpm.round();
+  //     
+  //     // تحديث ضغط الدم بناءً على BPM
+  //     if (bpm < 60) {
+  //       _bloodPressure = 90; // ضغط منخفض
+  //     } else if (bpm > 100) {
+  //       _bloodPressure = 140; // ضغط مرتفع
+  //     } else {
+  //       _bloodPressure = 120; // ضغط طبيعي
+  //     }
+  //     
+  //     // تحديث مستوى الأكسجين بناءً على BPM
+  //     if (bpm > 120) {
+  //       _oxygenLevel = 92; // انخفاض مع زيادة BPM
+  //     } else if (bpm < 60) {
+  //       _oxygenLevel = 95; // انخفاض طفيف مع BPM المنخفض
+  //     } else {
+  //       _oxygenLevel = 98; // طبيعي
+  //     }
+  //   });
+  // }
 
   // دالة التنبيه للحالات الخطرة
   void _triggerAlert(String message) {
@@ -159,20 +169,23 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     super.initState();
     _initializeServices();
     
-    _checkAndSetupAuth(); // This now only fetches user profile, not ECG listeners
-    _loadEmergencyContacts(); // Add initial load of emergency contacts
-    _cleanupTimer = Timer.periodic(const Duration(hours: 1), (_) {
-      // _clearOldECGReadings(); // Needs rework for the new structure
-      _logDebug("Skipping _clearOldECGReadings - needs rework.");
-    });
+    _checkAndSetupAuth();
+    _loadEmergencyContacts();
     _setupConnectionListener();
+    _setupHealthDataListener();
+    
+    // Start monitoring timer with optimized interval
+    _monitoringTimer = Timer.periodic(_monitoringInterval, (_) {
+      if (_isMonitoring && !_isReconnecting) {
+        _collectHealthData();
+      }
+    });
 
-    // Start listening to latest ECG readings from the correct service
-    _listenToLatestEcg();
-
-    // إضافة مؤقت للتحقق من الحالة كل دقيقة
-    Timer.periodic(const Duration(minutes: 1), (_) {
-      _checkAndSendAutoAlert();
+    // Add periodic data refresh
+    Timer.periodic(_dataRefreshInterval, (_) {
+      if (_isMonitoring) {
+        _refreshData();
+      }
     });
   }
 
@@ -182,8 +195,8 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     _cleanupTimer?.cancel();
     _connectionSubscription?.cancel();
     _healthDataSubscription?.cancel();
-    _latestEcgReadingSubscription?.cancel();
-    // Dispose of controllers
+    _monitoringTimer?.cancel();
+    _reconnectionTimer?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _relationController.dispose();
@@ -217,25 +230,25 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     // Fetch user profile data (contacts, doctor phone) from Firestore
     // Keep this part as it fetches non-ECG related user data
     try {
-      final connectionRef = FirebaseDatabase.instance.ref('.info/connected');
-      final snapshot = await connectionRef.get();
-      final isConnected = snapshot.value as bool? ?? false;
+      // final connectionRef = FirebaseDatabase.instance.ref('.info/connected');
+      // final snapshot = await connectionRef.get();
+      // final isConnected = snapshot.value as bool? ?? false;
 
-      if (!isConnected) {
-         _logWarning('No connection to Firebase while fetching profile. Operating in offline mode.');
-         if (mounted) {
-           setState(() {
-             _status = 'Offline mode - Limited functionality';
-           });
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(
-               content: Text('No internet connection. Profile data might be stale.'),
-               backgroundColor: Colors.orange,
-               duration: Duration(seconds: 5),
-             ),
-           );
-         }
-       }
+      // if (!isConnected) {
+      //    _logWarning('No connection to Firebase while fetching profile. Operating in offline mode.');
+      //    if (mounted) {
+      //      setState(() {
+      //        _status = 'Offline mode - Limited functionality';
+      //      });
+      //      ScaffoldMessenger.of(context).showSnackBar(
+      //        const SnackBar(
+      //          content: Text('No internet connection. Profile data might be stale.'),
+      //          backgroundColor: Colors.orange,
+      //          duration: Duration(seconds: 5),
+      //        ),
+      //      );
+      //    }
+      //  }
 
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
@@ -279,33 +292,41 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       final connected = event.snapshot.value as bool? ?? false;
       if (!mounted) return;
       
-        setState(() {
+      setState(() {
         if (!connected && _status != 'Offline') {
           _status = 'Offline - Reconnecting...';
           _logWarning('Database connection lost.');
+          _startReconnectionAttempts();
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Connection lost. Trying to reconnect...'),
+              content: Text('Connection lost. Attempting to reconnect...'),
               backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
             ),
           );
         } else if (connected && _status.contains('Offline')) {
           _status = _isMonitoring ? 'Monitoring resumed' : 'Connected';
           _logInfo('Database connection established.');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          _isReconnecting = false;
+          _reconnectionAttempts = 0;
+          _reconnectionTimer?.cancel();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
               content: Text('Connection restored!'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 3),
-          ),
-        );
+            ),
+          );
           
           // Refresh data when connection is restored
           _refreshDataAfterReconnection();
-      }
+        }
       });
     }, onError: (error) {
-      _logError('Error in connection listener: $error');
+      _logError('Error in connection listener', error);
+      _startReconnectionAttempts();
     });
   }
 
@@ -332,9 +353,8 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   }
 
   void _stopMonitoring() {
-    if (!_isMonitoring) {
-      return;
-    }
+    if (!_isMonitoring) return;
+    
     _monitoringTimer?.cancel();
     setState(() {
       _isMonitoring = false;
@@ -361,52 +381,45 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       _logWarning('Attempted health data collection but user/email is missing.');
       return;
     }
-    final String userId = user.uid;
 
     try {
-      // First try to get existing data
+      // Get latest health data from Firebase - MODIFIED PATH
       final snapshot = await _databaseRef
-          .child('users')
-          .child(userId)
-          .child('health_data')
+          .child('heart_monitor') // MODIFIED path
           .orderByChild('timestamp')
           .limitToLast(1)
           .get();
 
-      // If no data exists, create initial data
       if (!snapshot.exists) {
-        _logInfo('No health data found, creating initial data');
+        _logInfo('No health data found at /heart_monitor');
+        // Generate realistic initial values - COMMENTED OUT FOR GLOBAL PATH
+        // final random = Random();
+        // final initialHeartRate = 65 + random.nextInt(15); // 65-80 bpm
+        // final initialBloodPressure = 110 + random.nextInt(20); // 110-130 mmHg
+        // final initialOxygenLevel = 96 + random.nextInt(4); // 96-99%
         
-        // Generate realistic initial values
-        final random = Random();
-        final initialHeartRate = 65 + random.nextInt(15); // 65-80 bpm
-        final initialBloodPressure = 110 + random.nextInt(20); // 110-130 mmHg
-        final initialOxygenLevel = 96 + random.nextInt(4); // 96-99%
-        
-        final initialData = {
-          'heartRate': initialHeartRate,
-          'bloodPressure': initialBloodPressure,
-          'oxygenLevel': initialOxygenLevel,
-          'timestamp': ServerValue.timestamp,
-          'location': {
-            'latitude': 0.0,
-            'longitude': 0.0
-          }
-        };
+        // final initialData = {
+        //   'heartRate': initialHeartRate,
+        //   'bloodPressure': initialBloodPressure,
+        //   'oxygenLevel': initialOxygenLevel,
+        //   'timestamp': ServerValue.timestamp,
+        //   'location': {
+        //     'latitude': 0.0,
+        //     'longitude': 0.0
+        //   }
+        // };
 
-        await _databaseRef
-            .child('users')
-            .child(userId)
-            .child('health_data')
-            .push()
-            .set(initialData);
+        // await _databaseRef
+        //     .child('heart_monitor') // Would write to global path
+        //     .push()
+        //     .set(initialData);
             
         if (!mounted) return;
         setState(() {
-          _heartRate = initialHeartRate;
-          _bloodPressure = initialBloodPressure;
-          _oxygenLevel = initialOxygenLevel;
-          _status = 'Monitoring started with initial values';
+          _heartRate = 0; // Default if no data
+          _bloodPressure = 0; // Default if no data
+          _oxygenLevel = 0; // Default if no data
+          _status = 'No data from ESP32 at /heart_monitor';
         });
         
         return;
@@ -414,53 +427,59 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
       // Process the data if it exists
       if (snapshot.value == null || snapshot.value is! Map) {
-        throw Exception('Invalid data format received from database');
+        throw Exception('Invalid data format received from /heart_monitor');
       }
 
       final data = Map<String, dynamic>.from(snapshot.value as Map);
       if (data.isEmpty) {
-        throw Exception('Empty data received from database');
+        throw Exception('Empty data received from /heart_monitor');
       }
       
       final latestDataRaw = data.values.first;
       if (latestDataRaw == null || latestDataRaw is! Map) {
-         throw Exception('Invalid data format received from database');
+         throw Exception('Invalid data format in /heart_monitor entry');
       }
       
       final latestData = Map<String, dynamic>.from(latestDataRaw);
       
-      // Extract location data safely
-      final locationRaw = latestData['location'];
-      final locationData = (locationRaw != null && locationRaw is Map)
-          ? Map<String, dynamic>.from(locationRaw)
-          : <String, dynamic>{};
+      // Extract location data safely - ESP32 does not send this
+      // final locationRaw = latestData['location'];
+      // final locationData = (locationRaw != null && locationRaw is Map)
+      //     ? Map<String, dynamic>.from(locationRaw)
+      //     : <String, dynamic>{};
       
       // Create health data structure
       final healthData = <String, dynamic>{
-        'heartRate': (latestData['heartRate'] as num?)?.toDouble() ?? 70.0,
-        'bloodPressure': (latestData['bloodPressure'] as num?)?.toDouble() ?? 120.0,
-        'oxygenLevel': (latestData['oxygenLevel'] as num?)?.toDouble() ?? 98.0,
+        'heartRate': (latestData['bpm_pulse'] as num?)?.toDouble() ?? 0.0, // MODIFIED field from bpm_pulse
+        'bloodPressure': (latestData['bloodPressure'] as num?)?.toDouble() ?? 0.0, // ESP32 does not send, will default to 0
+        'oxygenLevel': (latestData['oxygenLevel'] as num?)?.toDouble() ?? 0.0, // ESP32 does not send, will default to 0
         'timestamp': (latestData['timestamp'] as num?)?.toDouble() ?? DateTime.now().millisecondsSinceEpoch.toDouble(),
-        'location': locationData,
+        // 'location': locationData, // ESP32 does not send location
+        'ecgData': latestData['ecgData'], // ESP32 does not send this as a list, chart might be empty
+        'raw_pulse': (latestData['raw_pulse'] as num?)?.toDouble() ?? 0.0 // Store raw_pulse if needed later
       };
 
       // Update state
       if (!mounted) return;
       setState(() {
         _heartRate = healthData['heartRate'].round();
-        _bloodPressure = healthData['bloodPressure'].round();
-        _oxygenLevel = healthData['oxygenLevel'].round();
+        _bloodPressure = healthData['bloodPressure'].round(); // Will be 0
+        _oxygenLevel = healthData['oxygenLevel'].round(); // Will be 0
         _latestHealthData = healthData;
         
         // Update status with formatted time
         final timestamp = healthData['timestamp'];
         if (timestamp != null) {
-          final updateTime = DateTime.fromMillisecondsSinceEpoch(timestamp.round());
-          _status = 'Monitoring... (Updated: ${updateTime.hour.toString().padLeft(2, '0')}:${updateTime.minute.toString().padLeft(2, '0')}:${updateTime.second.toString().padLeft(2, '0')})';
+          final updateTime = DateTime.fromMillisecondsSinceEpoch((timestamp.round() * 1000)); // ESP32 timestamp is in seconds
+          _status = 'Monitoring... (ESP32 Data Updated: ${updateTime.hour.toString().padLeft(2, '0')}:${updateTime.minute.toString().padLeft(2, '0')}:${updateTime.second.toString().padLeft(2, '0')})';
         } else {
              _status = 'Monitoring...';
         }
       });
+
+      // Analyze the health data
+      _analyzeCurrentReading(healthData);
+      
     } catch (e) {
       _logError('Error collecting health data', e);
       if (!mounted) return;
@@ -491,224 +510,6 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     }
   }
 
-  // Add a BPM conversion function
-  double _convertToBPM(double rawValue) {
-    // Simple conversion from raw ECG value to approximate BPM
-    // This is a placeholder implementation - adjust based on your actual data calibration
-    const double minBPM = 40.0;
-    const double maxBPM = 180.0;
-    
-    // Map raw value to BPM range
-    // This assumes higher raw values correspond to higher BPM
-    double bpmValue = minBPM + (rawValue / 4095.0) * (maxBPM - minBPM);
-    
-    // Ensure realistic BPM values
-    return _heartRate > 0 ? _heartRate.toDouble() : bpmValue;
-  }
-
-  // Update process sequential values to use BPM
-  void _processSequentialValues(List<double> values) {
-    if (values.isEmpty) return;
-    
-    List<FlSpot> newSpots = [];
-    double nextX = _ecgChartData.isEmpty ? 0 : _ecgChartData.last.x + 0.1; // Smaller time interval
-    
-    // Remove old points if exceeding max
-    while (_ecgChartData.length + values.length > _maxDataPoints) {
-      _ecgChartData.removeAt(0);
-    }
-    
-    // Renumber existing points
-    for (int i = 0; i < _ecgChartData.length; i++) {
-      _ecgChartData[i] = FlSpot(i * 0.1, _ecgChartData[i].y);
-    }
-    
-    // Add new points using BPM values
-    for (final value in values) {
-      double bpmValue = _convertToBPM(value);
-      newSpots.add(FlSpot(nextX, bpmValue));
-      nextX += 0.1;
-    }
-    
-    if (mounted) {
-      setState(() {
-        _ecgChartData.addAll(newSpots);
-      });
-    }
-  }
-
-  // Update add single data point to use BPM
-  void _addSingleDataPoint(double value) {
-    if (!mounted) return;
-    
-    // Remove oldest point if at max
-    if (_ecgChartData.length >= _maxDataPoints) {
-      _ecgChartData.removeAt(0);
-      
-      // Renumber remaining points
-      for (int i = 0; i < _ecgChartData.length; i++) {
-        _ecgChartData[i] = FlSpot(i * 0.1, _ecgChartData[i].y);
-      }
-    }
-    
-    double bpmValue = _convertToBPM(value);
-    double x = _ecgChartData.isEmpty ? 0 : _ecgChartData.last.x + 0.1;
-    
-    setState(() {
-      _ecgChartData.add(FlSpot(x, bpmValue));
-    });
-  }
-
-  // تحسين دالة الاستماع للبيانات
-  void _listenToLatestEcg() {
-    _logger.i("Setting up ECG data stream...");
-    
-    _latestEcgReadingSubscription?.cancel();
-    
-    // تجميع البيانات لمعالجتها دفعة واحدة
-    List<EcgReading> readingBuffer = [];
-    Timer? updateTimer;
-    
-    _latestEcgReadingSubscription = _ecgDataService.latestEcgReadingStream.listen(
-      (EcgReading? reading) {
-        if (!mounted || reading == null) return;
-        
-        readingBuffer.add(reading);
-        
-        // تحديث كل 50 مللي ثانية لتحسين الأداء
-        updateTimer?.cancel();
-        updateTimer = Timer(const Duration(milliseconds: 50), () {
-          if (!mounted) return;
-          
-          for (var bufferedReading in readingBuffer) {
-            if (bufferedReading.values != null && bufferedReading.values!.isNotEmpty) {
-              _processSequentialValues(bufferedReading.values!
-                  .map((v) => v.toDouble())
-                  .toList());
-            } else if (bufferedReading.rawValue != null) {
-              _addSingleDataPoint(bufferedReading.rawValue!.toDouble());
-            }
-            
-            // تحديث معدل ضربات القلب إذا كان متوفراً
-            if (bufferedReading.bpm != null) {
-              _updateHealthMetrics(bufferedReading.bpm!);
-            }
-          }
-          
-          readingBuffer.clear();
-        });
-      },
-      onError: (error) {
-        _logError('Error in ECG stream', error);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error receiving ECG data: ${error.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    );
-  }
-
-  // Update ECG chart configuration to display BPM values
-  Widget _buildEcgChart() {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2 * 255),
-            spreadRadius: 3,
-            blurRadius: 7,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: RepaintBoundary(
-        child: LineChart(
-          LineChartData(
-            minY: 30, // Minimum BPM value
-            maxY: 200, // Maximum BPM value
-            minX: _ecgChartData.isEmpty ? 0 : _ecgChartData.first.x,
-            maxX: _ecgChartData.isEmpty ? 10 : _ecgChartData.last.x,
-            lineBarsData: [
-              LineChartBarData(
-                spots: _ecgChartData,
-                isCurved: true,
-                curveSmoothness: 0.3,
-                color: Colors.red,
-                barWidth: 2,
-                isStrokeCapRound: true,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: Colors.red.withValues(alpha: 0.1 * 255),
-                ),
-              ),
-            ],
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: true,
-              drawHorizontalLine: true,
-              horizontalInterval: 20, // Interval in BPM
-              verticalInterval: 0.5,
-              getDrawingHorizontalLine: (value) {
-                return FlLine(
-                  color: value == 0 ? Colors.grey[400]! : Colors.grey[200]!,
-                  strokeWidth: value == 0 ? 1.5 : 0.8,
-                );
-              },
-              getDrawingVerticalLine: (value) {
-                return FlLine(
-                  color: Colors.grey[200]!,
-                  strokeWidth: 0.8,
-                );
-              },
-            ),
-            titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 30,
-                  interval: 1,
-                ),
-              ),
-              leftTitles: AxisTitles(
-                axisNameWidget: const Text(
-                  'BPM',
-                  style: TextStyle(
-                    color: Colors.blueGrey,
-                    fontWeight: FontWeight.bold, 
-                  ),
-                ),
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  interval: 20, // BPM intervals
-                ),
-              ),
-              topTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              rightTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-            ),
-            borderData: FlBorderData(
-              show: true,
-              border: Border.all(color: Colors.grey[300]!, width: 1),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // تحسين بطاقة التحليل
   Widget _buildAnalysisCard() {
     return Card(
@@ -732,7 +533,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 Icon(Icons.analytics, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
               Text(
-                  'Reading Analysis',
+                  'تحليل القراءة',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -750,7 +551,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 onPressed: () => _analyzeCurrentReading(_latestHealthData),
                 icon: const Icon(Icons.refresh),
                 label: const Text(
-                  'Update Analysis',
+                  'تحديث التحليل',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -772,7 +573,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
   // تحسين بطاقة التحليل
   Widget _buildAnalysisResultState() {
-    // If no data available, display a simple message
+    // إذا لم تكن هناك بيانات، نعرض رسالة بسيطة
     if (_analysisResultText == null || _analysisResultText!.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -786,7 +587,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         ),
         child: Center(
           child: Text(
-            'Waiting for data...',
+            'في انتظار البيانات...',
             style: TextStyle(
               color: Colors.grey.shade600,
               fontSize: 16,
@@ -820,15 +621,15 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor.withValues(alpha: 0.5 * 255),
+        color: cardColor.withAlpha((0.5 * 255).round()),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: textColor.withValues(alpha: 0.3 * 255),
+          color: textColor.withAlpha((0.3 * 255).round()),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.shade200.withValues(alpha: 0.8 * 255),
+            color: Colors.red.shade200.withAlpha((0.8 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -856,15 +657,15 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: textColor.withValues(alpha: 0.1 * 255),
+                color: textColor.withAlpha((0.1 * 255).round()),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: textColor.withValues(alpha: 0.2 * 255),
+                  color: textColor.withAlpha((0.2 * 255).round()),
                   width: 1,
                 ),
               ),
               child: Text(
-                'Heart Rate: $_heartRate BPM',
+                'معدل ضربات القلب: $_heartRate BPM',
                 style: TextStyle(
                   color: textColor,
                   fontSize: 14,
@@ -882,13 +683,13 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   void _analyzeCurrentReading(dynamic reading) {
     if (reading == null) {
       setState(() {
-        _analysisResultText = null;  // We'll leave the card empty instead of showing an error message
+        _analysisResultText = null;  // سنترك البطاقة فارغة بدلاً من عرض رسالة خطأ
       });
       return;
     }
 
     try {
-      // Check for heart rate
+      // التحقق من وجود معدل ضربات القلب
       final bpm = _heartRate;
       if (bpm <= 0) {
         setState(() {
@@ -897,22 +698,22 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         return;
       }
 
-      // Analyze heart condition based on heart rate
+      // تحليل حالة القلب بناءً على معدل ضربات القلب
       String analysis;
       if (bpm < 60) {
-        analysis = "Low heart rate";
-        // Alert for severe low rate
+        analysis = "معدل ضربات القلب منخفض";
+        // تنبيه في حالة الانخفاض الشديد
         if (bpm < 50) {
-          _triggerAlert("Warning: Very low heart rate!");
+          _triggerAlert("تحذير: معدل ضربات القلب منخفض جداً!");
         }
       } else if (bpm > 100) {
-        analysis = "High heart rate";
-        // Alert for severe high rate
+        analysis = "معدل ضربات القلب مرتفع";
+        // تنبيه في حالة الارتفاع الشديد
         if (bpm > 120) {
-          _triggerAlert("Warning: Very high heart rate!");
+          _triggerAlert("تحذير: معدل ضربات القلب مرتفع جداً!");
         }
       } else {
-        analysis = "Normal heart rate";
+        analysis = "معدل ضربات القلب طبيعي";
       }
 
       setState(() {
@@ -921,9 +722,9 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
     } catch (e) {
       setState(() {
-        _analysisResultText = null;  // In case of error, leave the card empty
+        _analysisResultText = null;  // في حالة الخطأ، نترك البطاقة فارغة
       });
-      _logError('Error analyzing data', e);
+      _logError('خطأ في تحليل البيانات', e);
     }
   }
 
@@ -939,40 +740,104 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   void _logDebug(String message) => _logger.d(message);
   void _logInfo(String message) => _logger.i(message);
   void _logWarning(String message) => _logger.w(message);
-  void _logError(String message, [Object? error]) {
-    _logger.e(message, error);
+  void _logError(String message, [Object? error, StackTrace? stackTrace]) {
+    _logger.e(message, error, stackTrace);
   }
 
   Future<void> _refreshData() async {
+    if (!mounted || !_isMonitoring) return;
+
     try {
-      await _loadEmergencyContacts(); // Refresh emergency contacts
-      final newReading = await _ecgService.getCurrentReading();
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      // Check if we need to refresh based on last update
+      if (_lastDataUpdate != null && 
+          DateTime.now().difference(_lastDataUpdate!) < _dataRefreshInterval) {
+        return;
+      }
+
+      // Force a fresh data fetch
+      await _collectHealthData();
+      
+      // Update last refresh time
+      _lastDataUpdate = DateTime.now();
+      
       if (mounted) {
         setState(() {
-          if (newReading != null) {
-            // Add to chart data
-            _ecgChartData.add(FlSpot(
-              _ecgChartData.length.toDouble(),
-              newReading['value']?.toDouble() ?? 0.0
-            ));
-            
-            // Keep only last 100 points
-            if (_ecgChartData.length > 100) {
-              _ecgChartData.removeAt(0);
-            }
-          }
+          _status = 'Data refreshed';
         });
-        
-        // Analyze the new reading
-        _analyzeCurrentReading(newReading);
       }
     } catch (e) {
+      _logError('Error refreshing data', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating data: $e'))
+          SnackBar(
+            content: Text('Error refreshing data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _refreshData,
+              textColor: Colors.white,
+            ),
+          ),
         );
       }
     }
+  }
+
+  void _startReconnectionAttempts() {
+    if (_isReconnecting) return;
+    
+    _isReconnecting = true;
+    _reconnectionAttempts = 0;
+    _reconnectionTimer?.cancel();
+    
+    _reconnectionTimer = Timer.periodic(_reconnectionDelay, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_reconnectionAttempts >= _maxReconnectionAttempts) {
+        timer.cancel();
+        _isReconnecting = false;
+        if (mounted) {
+          setState(() {
+            _status = 'Connection failed - Please check your internet';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Failed to reconnect. Please check your internet connection.'),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Retry',
+                onPressed: () {
+                  _reconnectionAttempts = 0;
+                  _startReconnectionAttempts();
+                },
+                textColor: Colors.white,
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      _reconnectionAttempts++;
+      _logInfo('Reconnection attempt $_reconnectionAttempts of $_maxReconnectionAttempts');
+      
+      // Attempt to reconnect
+      _checkAndSetupAuth().then((_) {
+        if (mounted) {
+          setState(() {
+            _status = 'Reconnecting... (Attempt $_reconnectionAttempts)';
+          });
+        }
+      }).catchError((error) {
+        _logError('Reconnection attempt failed', error);
+      });
+    });
   }
 
   Future<void> _handleEmergency() async {
@@ -983,16 +848,16 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       if (!mounted) return;
       
       if (_emergencyContacts.isEmpty) {
-        // If no emergency contacts, show warning message
+        // إذا لم تكن هناك جهات اتصال طوارئ، اعرض رسالة تحذير
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Alert'),
-            content: const Text('No emergency contacts added. Do you want to add contacts now?'),
+            title: const Text('تنبيه'),
+            content: const Text('لم يتم إضافة جهات اتصال للطوارئ. هل تريد إضافة جهات اتصال الآن؟'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Later'),
+                child: const Text('لاحقاً'),
               ),
               TextButton(
                 onPressed: () {
@@ -1002,7 +867,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.red,
                 ),
-                child: const Text('Add Now'),
+                child: const Text('إضافة الآن'),
               ),
             ],
           ),
@@ -1010,7 +875,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         return;
       }
 
-      // Show list of contacts with call options
+      // عرض قائمة جهات الاتصال مع خيارات الاتصال
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
@@ -1033,7 +898,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                     Icon(Icons.emergency, color: Colors.red.shade700),
                     const SizedBox(width: 8),
                     Text(
-                      'Emergency Contacts',
+                      'جهات اتصال الطوارئ',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1055,7 +920,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                         backgroundColor: Colors.red.shade100,
                         child: Icon(Icons.person, color: Colors.red.shade700),
                       ),
-                      title: Text(contact['name'] ?? 'Contact ${index + 1}'),
+                      title: Text(contact['name'] ?? 'جهة اتصال ${index + 1}'),
                       subtitle: Text(contact['phone'] ?? ''),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1084,7 +949,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _showAddEmergencyContactDialog,
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Contact'),
+                        label: const Text('إضافة جهة اتصال'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
@@ -1097,7 +962,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                       child: ElevatedButton.icon(
                         onPressed: () => _sendEmergencyToAll(),
                         icon: const Icon(Icons.warning),
-                        label: const Text('Send Alert to All'),
+                        label: const Text('إرسال تنبيه للجميع'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
@@ -1117,7 +982,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error contacting emergency contacts: ${e.toString()}'),
+            content: Text('خطأ في الاتصال بجهات الطوارئ: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1125,499 +990,47 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     }
   }
 
-  // Improved SMS sending function with multiple options
-  Future<void> _sendEmergencySMS(String phoneNumber, {MessageType type = MessageType.both}) async {
-    if (phoneNumber.isEmpty) {
-      _logWarning("Cannot send message - empty phone number");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Phone number is empty'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-    
-    // Clean phone number of non-digit characters
-    phoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-    if (phoneNumber.isEmpty) {
-      _logWarning("Cannot send message - phone number contains no digits");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Invalid phone number format'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-    
+  Future<void> _sendEmergencySMS(String phoneNumber) async {
     try {
-      // Show sending indicator
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars(); // Clear any existing snackbars first
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                SizedBox(width: 16),
-                Text('Sending emergency message...'),
-              ],
-            ),
-            duration: Duration(seconds: 15), // Longer duration while sending
-            backgroundColor: Colors.blue,
-          ),
-        );
-      }
-      
-      // Format and sanitize the message
-      String message = _smsService.formatEmergencyMessage(
-        userEmail: _userEmail ?? 'Unknown',
+      // تحضير الرسالة باستخدام الدالة المساعدة
+      final message = _smsService.formatEmergencyMessage(
+        userEmail: _userEmail ?? 'غير معروف',
         heartRate: _heartRate,
         bloodPressure: _bloodPressure,
         oxygenLevel: _oxygenLevel,
-        diagnosis: _analysisResultText ?? 'Not available',
-      ).trim();
+        diagnosis: _analysisResultText ?? 'غير متوفر',
+      );
 
-      bool whatsappSuccess = false;
-      bool smsSuccess = false;
-      String statusKey = "${phoneNumber}_${DateTime.now().millisecondsSinceEpoch}";
-      _messageStatus[statusKey] = "Sending...";
-      
-      // Try sending through selected channels
-      if (type == MessageType.whatsapp || type == MessageType.both) {
-        whatsappSuccess = await _sendWithRetry(
-          () => _smsService.sendWhatsAppMessage(phoneNumber: phoneNumber, message: message),
-          "WhatsApp message"
+      // إرسال الرسالة عبر واتساب
+      final success = await _smsService.sendWhatsAppMessage(
+        phoneNumber: phoneNumber,
+        message: message,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال رسالة الطوارئ عبر واتساب بنجاح'),
+            backgroundColor: Colors.green,
+          ),
         );
-      }
-      
-      // Only try SMS if WhatsApp failed or SMS was specifically requested
-      if ((type == MessageType.sms || (type == MessageType.both && !whatsappSuccess))) {
-        smsSuccess = await _sendWithRetry(
-          () => _smsService.sendSMS(phoneNumber: phoneNumber, message: message),
-          "SMS message"
-        );
-      }
-      
-      // Update status based on results
-      if (whatsappSuccess || smsSuccess) {
-        _messageStatus[statusKey] = "Sent successfully";
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Emergency message sent to $phoneNumber via ${whatsappSuccess ? "WhatsApp" : "SMS"}'
-              ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        _messageStatus[statusKey] = "Failed to send";
-        throw 'Failed to send emergency message through any channel';
+      } else if (mounted) {
+        throw 'فشل في إرسال رسالة الطوارئ';
       }
     } catch (e) {
-      _logError('Error sending emergency message', e);
+      _logError('Error sending emergency WhatsApp message', e);
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send message: ${e.toString()}'),
+            content: Text('فشل في إرسال رسالة الطوارئ: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: 'Try Options',
-              onPressed: () => _showMessageOptionsDialog(phoneNumber),
-              textColor: Colors.white,
+              label: 'حاول مرة أخرى',
+              onPressed: () => _sendEmergencySMS(phoneNumber),
             ),
           ),
         );
-      }
-    }
-  }
-
-  // Helper function to retry sending with exponential backoff
-  Future<bool> _sendWithRetry(Future<bool> Function() sendFunction, String messageType) async {
-    int attempts = 0;
-    int baseDelayMs = 500;
-    
-    while (attempts < _maxRetryAttempts) {
-      try {
-        bool success = await sendFunction();
-        if (success) return true;
-        
-        // If failed, wait before retrying (exponential backoff)
-        attempts++;
-        if (attempts < _maxRetryAttempts) {
-          await Future.delayed(Duration(milliseconds: baseDelayMs * (1 << attempts)));
-        }
-      } catch (e) {
-        _logError('Error in attempt $attempts', e);
-        attempts++;
-        if (attempts < _maxRetryAttempts) {
-          await Future.delayed(Duration(milliseconds: baseDelayMs * (1 << attempts)));
-        }
-      }
-    }
-    return false;
-  }
-  
-  // Show dialog with messaging options
-  Future<void> _showMessageOptionsDialog(String phoneNumber) async {
-    if (!mounted) return;
-    
-    await showDialog<MessageType>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send Emergency Message'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Send to: $phoneNumber'),
-            const SizedBox(height: 16),
-            const Text('Choose sending method:'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _sendEmergencySMS(phoneNumber, type: MessageType.sms);
-            },
-            child: const Text('SMS Only'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _sendEmergencySMS(phoneNumber, type: MessageType.whatsapp);
-            },
-            child: const Text('WhatsApp Only'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _sendEmergencySMS(phoneNumber, type: MessageType.both);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Try Both'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Update the SMS service function to handle edge cases better
-  Future<void> _sendEmergencyToAll() async {
-    if (_emergencyContacts.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No emergency contacts available'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-    
-    // Count valid phone numbers
-    int validContactsCount = 0;
-    for (final contact in _emergencyContacts) {
-      String phone = contact['phone'] ?? '';
-      phone = phone.replaceAll(RegExp(r'[^\d]'), '');
-      if (phone.isNotEmpty) validContactsCount++;
-    }
-    
-    if (validContactsCount == 0) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No valid phone numbers in contacts'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-    
-    // Store context in local variable for safe access
-    final BuildContext currentContext = context;
-    
-    // Show confirmation dialog
-    final bool? confirmed = await showDialog<bool>(
-      context: currentContext,
-      builder: (context) => AlertDialog(
-        title: const Text('Send Emergency Alert'),
-        content: Text(
-          'Send alert to all $validContactsCount contacts?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Send to All'),
-          ),
-        ],
-      ),
-    );
-    
-    if (confirmed != true || !mounted) return;
-    
-    // Store a fresh context for safe access after await
-    final BuildContext freshContext = context;
-    
-    // Show progress dialog and capture its context
-    BuildContext? dialogContext;
-    showDialog(
-      // ignore: use_build_context_synchronously
-      context: freshContext,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        dialogContext = context;
-        return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Sending to $validContactsCount contacts...'),
-            ],
-          ),
-        );
-      },
-    );
-    
-    int successCount = 0;
-    int failCount = 0;
-    
-    // Send to all contacts
-    for (final contact in _emergencyContacts) {
-      try {
-        String phoneNumber = contact['phone'] ?? '';
-        if (phoneNumber.isEmpty) continue;
-        
-        // Clean phone number
-        phoneNumber = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-        if (phoneNumber.isEmpty) continue;
-        
-        // Prepare message
-        final message = _smsService.formatEmergencyMessage(
-          userEmail: _userEmail ?? 'Unknown',
-          heartRate: _heartRate,
-          bloodPressure: _bloodPressure,
-          oxygenLevel: _oxygenLevel,
-          diagnosis: _analysisResultText ?? 'Not available',
-        );
-        
-        bool success = await _smsService.sendWhatsAppMessage(
-          phoneNumber: phoneNumber,
-          message: message,
-        );
-        
-        if (!success) {
-          // Try SMS as fallback
-          success = await _smsService.sendSMS(
-            phoneNumber: phoneNumber,
-            message: message,
-          );
-        }
-        
-        if (success) {
-          successCount++;
-          _messageStatus["${phoneNumber}_${DateTime.now().millisecondsSinceEpoch}"] = "Sent successfully";
-        } else {
-          failCount++;
-          _messageStatus["${phoneNumber}_${DateTime.now().millisecondsSinceEpoch}"] = "Failed";
-        }
-      } catch (e) {
-        failCount++;
-        _logError('Error sending to contact', e);
-      }
-    }
-    
-    // Close progress dialog and show results
-    if (mounted) {
-      // Close dialog if it was shown
-      if (dialogContext != null) {
-        // ignore: use_build_context_synchronously
-        Navigator.of(dialogContext!).pop();
-      }
-      
-      // Show results in a new snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Sent to $successCount contacts${failCount > 0 ? ', $failCount failed' : ''}',
-          ),
-          backgroundColor: failCount > 0 ? Colors.orange : Colors.green,
-          action: failCount > 0 ? SnackBarAction(
-            label: 'Retry Failed',
-            onPressed: _retryFailedMessages,
-            textColor: Colors.white,
-          ) : null,
-        ),
-      );
-    }
-  }
-  
-  // Function to retry failed messages
-  void _retryFailedMessages() {
-    // This would need to track which specific messages failed
-    // For now, just show the send to all dialog again
-    _sendEmergencyToAll();
-  }
-  
-  // Fix the auto-alert function to be more robust
-  void _checkAndSendAutoAlert() async {
-    // Check for emergency contacts
-    if (_emergencyContacts.isEmpty) return;
-
-    // Check if last message was sent more than 15 minutes ago
-    if (_lastAutoMessageTime != null &&
-        DateTime.now().difference(_lastAutoMessageTime!) < const Duration(minutes: 15)) {
-      return;
-    }
-
-    // Check if any values are unrealistic
-    if (_heartRate <= 0 || _heartRate > 300 || 
-        _bloodPressure <= 0 || _bloodPressure > 300 ||
-        _oxygenLevel <= 0 || _oxygenLevel > 100) {
-      _logWarning("Skipping auto-alert due to unrealistic values");
-      return;
-    }
-
-    bool isDangerous = false;
-    String reason = '';
-
-    // Check heart rate
-    if (_heartRate > 120) {
-      isDangerous = true;
-      reason = 'Dangerous high heart rate ($_heartRate BPM)';
-    } else if (_heartRate < 50) {
-      isDangerous = true;
-      reason = 'Dangerous low heart rate ($_heartRate BPM)';
-    }
-    
-    // Check oxygen level
-    if (_oxygenLevel < 90) {
-      isDangerous = true;
-      reason = 'Dangerous low oxygen level ($_oxygenLevel%)';
-    }
-
-    // Check blood pressure
-    if (_bloodPressure > 180) {
-      isDangerous = true;
-      reason = 'Dangerous high blood pressure ($_bloodPressure mmHg)';
-    } else if (_bloodPressure < 90) {
-      isDangerous = true;
-      reason = 'Dangerous low blood pressure ($_bloodPressure mmHg)';
-    }
-
-    if (isDangerous) {
-      _lastAutoMessageTime = DateTime.now();
-      
-      // Log the dangerous condition
-      _logWarning('Auto-alert triggered: $reason');
-      
-      // Store current context before async operations
-      final BuildContext currentContext = context;
-      
-      // Show alert to user first (if app is visible)
-      if (mounted) {
-        _triggerAlert('Automatic alert: $reason');
-      }
-      
-      // Validate contacts before sending
-      List<Map<String, String>> validContacts = [];
-      for (final contact in _emergencyContacts) {
-        String phone = contact['phone'] ?? '';
-        phone = phone.replaceAll(RegExp(r'[^\d]'), '');
-        if (phone.isNotEmpty) {
-          validContacts.add({...contact, 'phone': phone});
-        }
-      }
-      
-      if (validContacts.isEmpty) {
-        _logWarning('No valid contacts for auto-alert');
-        return;
-      }
-      
-      // Send message to first valid contact only to avoid spamming
-      try {
-        final firstContact = validContacts.first;
-        final phoneNumber = firstContact['phone'] ?? '';
-        
-        if (phoneNumber.isNotEmpty) {
-          final message = _smsService.formatEmergencyMessage(
-            userEmail: _userEmail ?? 'Unknown',
-            heartRate: _heartRate,
-            bloodPressure: _bloodPressure,
-            oxygenLevel: _oxygenLevel,
-            diagnosis: reason,
-          );
-
-          // Try both channels for auto alerts
-          bool success = false;
-          
-          try {
-            success = await _smsService.sendWhatsAppMessage(
-              phoneNumber: phoneNumber,
-              message: message,
-            );
-          } catch (e) {
-            _logError('Failed WhatsApp auto-alert', e);
-          }
-          
-          if (!success) {
-            try {
-              success = await _smsService.sendSMS(
-                phoneNumber: phoneNumber,
-                message: message,
-              );
-            } catch (e) {
-              _logError('Failed SMS auto-alert', e);
-            }
-          }
-          
-          // Check mounted and use stored context
-          if (success && mounted) {
-            final String successMessage = 'Automatic alert sent: $reason';
-            
-            // Use a safe method to show a snackbar after async operations
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(currentContext).showSnackBar(
-                  SnackBar(
-                    content: Text(successMessage),
-                    backgroundColor: Colors.orange,
-                    duration: const Duration(seconds: 5),
-                  ),
-                );
-              }
-            });
-          }
-        }
-      } catch (e) {
-        _logError('Error sending automatic alert', e);
       }
     }
   }
@@ -1635,11 +1048,29 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to make emergency call'),
+            content: Text('فشل في إجراء مكالمة الطوارئ'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  Future<void> _sendEmergencyToAll() async {
+    try {
+      for (final contact in _emergencyContacts) {
+        await _sendEmergencySMS(contact['phone'] ?? '');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال تنبيه الطوارئ لجميع جهات الاتصال'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      _logError('Error sending emergency to all contacts', e);
     }
   }
 
@@ -1648,21 +1079,18 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       _nameController.clear();
       _phoneController.clear();
       _relationController.clear();
-      
-      // Store context before async operation
-      final BuildContext currentContext = context;
 
       final result = await showDialog<bool>(
-        context: currentContext,
+        context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Add Emergency Contact'),
+          title: const Text('إضافة جهة اتصال طوارئ'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Name',
+                  labelText: 'الاسم',
                   prefixIcon: Icon(Icons.person),
                 ),
               ),
@@ -1670,7 +1098,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
               TextField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
-                  labelText: 'Phone Number',
+                  labelText: 'رقم الهاتف',
                   prefixIcon: Icon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
@@ -1679,7 +1107,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
               TextField(
                 controller: _relationController,
                 decoration: const InputDecoration(
-                  labelText: 'Relationship',
+                  labelText: 'صلة القرابة',
                   prefixIcon: Icon(Icons.family_restroom),
                 ),
               ),
@@ -1688,7 +1116,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: const Text('إلغاء'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
@@ -1696,7 +1124,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Add'),
+              child: const Text('إضافة'),
             ),
           ],
         ),
@@ -1704,35 +1132,24 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
       if (result == true) {
         await _loadEmergencyContacts();
-        
-        // Use a post-frame callback to safely handle UI after async
         if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contact added successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تمت إضافة جهة الاتصال بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
       _logError('Error adding emergency contact', e);
       if (mounted) {
-        // Use a post-frame callback to safely handle UI after async
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to add contact: ${e.toString()}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل في إضافة جهة الاتصال: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -1746,24 +1163,58 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     }
 
     try {
-      // Reference to the user's health data in Firebase
-      final healthDataRef = _databaseRef.child('users/${user.uid}/health_data');
+      // Reference to the user's health data in Firebase - MODIFIED PATH
+      final healthDataRef = _databaseRef.child('heart_monitor'); // MODIFIED path
       
       // Cancel existing subscription if any
       _healthDataSubscription?.cancel();
       
       // Listen for changes to health data
-      _healthDataSubscription = healthDataRef.onValue.listen((event) {
+      _healthDataSubscription = healthDataRef
+        .orderByChild('timestamp') // Order by timestamp to get latest
+        .limitToLast(1)        // Get only the latest entry
+        .onValue.listen((event) {
         if (!mounted) return;
         
-        final healthData = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (healthData != null) {
+        if (event.snapshot.value == null || event.snapshot.value is! Map) {
+          _logWarning('Health data listener received null or invalid data from /heart_monitor');
+          return;
+        }
+
+        final dataMap = Map<String, dynamic>.from(event.snapshot.value as Map);
+        if (dataMap.isEmpty) {
+          _logWarning('Health data listener received empty map from /heart_monitor');
+          return;
+        }
+
+        // The value is a map with one entry: { "<timestamp_key>": { ...data... } }
+        final latestEntryKey = dataMap.keys.first;
+        final latestData = Map<String, dynamic>.from(dataMap[latestEntryKey] as Map);
+
+        if (latestData != null) {
+          final currentRawPulse = (latestData['raw_pulse'] as num?)?.toDouble();
+
           setState(() {
-            _latestHealthData = Map<String, dynamic>.from(healthData);
-            _heartRate = (_latestHealthData?['heart_rate'] as num?)?.toInt() ?? 0;
-            _bloodPressure = (_latestHealthData?['blood_pressure'] as num?)?.toInt() ?? 0;
-            _oxygenLevel = (_latestHealthData?['oxygen_level'] as num?)?.toInt() ?? 0;
+            _heartRate = (latestData['bpm_pulse'] as num?)?.toInt() ?? _heartRate;
+            _bloodPressure = (latestData['bloodPressure'] as num?)?.toInt() ?? _bloodPressure;
+            _oxygenLevel = (latestData['oxygenLevel'] as num?)?.toInt() ?? _oxygenLevel;
+            
+            if (currentRawPulse != null) {
+              // Add the new raw_pulse to the chart data
+              _updateEcgChartDataWithSinglePoint(currentRawPulse);
+            }
+
+            _latestHealthData = {
+              'heartRate': (latestData['bpm_pulse'] as num?)?.toDouble() ?? 0.0,
+              'bloodPressure': 0.0, 
+              'oxygenLevel': 0.0, 
+              'timestamp': (latestData['timestamp'] as num?)?.toDouble() ?? DateTime.now().millisecondsSinceEpoch.toDouble(),
+              'raw_pulse': currentRawPulse ?? 0.0
+            }; 
+
           });
+          
+          _analyzeCurrentReading(_latestHealthData);
         }
       }, onError: (error) {
         _logError('Error listening to health data', error);
@@ -1773,6 +1224,32 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
     } catch (e) {
       _logError('Failed to setup health data listener', e);
     }
+  }
+
+  // New method to add a single point from raw_pulse
+  void _updateEcgChartDataWithSinglePoint(double rawValue) {
+    if (!mounted) return;
+
+    double nextX = _ecgChartData.isEmpty ? 0 : _ecgChartData.last.x + 1; // Increment X-axis by 1 for each new point
+    
+    // Normalize the raw_pulse value if needed, or use it directly.
+    // The existing _normalizeEcgValue function expects input 0-4095 and outputs -0.5 to 0.5.
+    // Adjust this normalization based on the actual range and desired display of raw_pulse.
+    // For now, let's assume raw_pulse is within a range that can be somewhat normalized by this.
+    double normalizedValue = _normalizeEcgValue(rawValue); 
+
+    final newSpot = FlSpot(nextX, normalizedValue);
+
+    setState(() {
+      if (_ecgChartData.length >= _maxDataPoints) {
+        _ecgChartData.removeAt(0); // Remove oldest point
+      }
+      _ecgChartData.add(newSpot);
+
+      // Optional: Adjust X-axis of all points if they go off-screen, 
+      // or let the chart scroll if it supports it with minX/maxX.
+      // For simplicity, we'll let minX/maxX handle it for now based on first/last point.
+    });
   }
 
   Future<void> _loadEmergencyContacts() async {
@@ -1862,7 +1339,10 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                         children: [
                           const Text(
                             'Live ECG',
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1901,7 +1381,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.red.shade200.withValues(alpha: 0.8 * 255),
+                        color: Colors.red.shade200.withAlpha((0.8 * 255).round()),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -1945,7 +1425,10 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
               children: [
                 const Text(
                   'Health Metrics',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Icon(Icons.monitor_heart, color: Colors.teal.shade600)
               ],
@@ -1989,7 +1472,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1 * 255),
+              color: color.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -2020,10 +1503,10 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1 * 255),
+              color: color.withAlpha((0.1 * 255).round()),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: color.withValues(alpha: 0.3 * 255),
+                color: color.withAlpha((0.3 * 255).round()),
                 width: 1,
               ),
             ),
@@ -2060,5 +1543,95 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
       default:
         return 0.5;
     }
+  }
+
+  // تحسين تكوين الرسم البياني
+  Widget _buildEcgChart() {
+    return Container(
+      // height: 300, // Parent SizedBox already defines height
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha((0.2 * 255).round()), // Reverted to withAlpha, assuming withValues handles it
+            spreadRadius: 3,
+            blurRadius: 7,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: RepaintBoundary(
+        child: LineChart(
+          LineChartData(
+            minY: -0.6,
+            maxY: 0.6,
+            minX: _ecgChartData.isEmpty ? 0 : _ecgChartData.first.x,
+            maxX: _ecgChartData.isEmpty ? 10 : _ecgChartData.last.x,
+            lineBarsData: [
+              LineChartBarData(
+                spots: _ecgChartData,
+                isCurved: true,
+                curveSmoothness: 0.3,
+                color: Colors.red,
+                barWidth: 2,
+                isStrokeCapRound: true,
+                dotData: FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: Colors.red.withAlpha((0.1 * 255).round()), // Reverted to withAlpha, assuming withValues handles it
+                ),
+              ),
+            ],
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: true,
+              drawHorizontalLine: true,
+              horizontalInterval: 0.2,
+              verticalInterval: 0.5,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                  color: value == 0 ? Colors.grey[400]! : Colors.grey[200]!,
+                  strokeWidth: value == 0 ? 1.5 : 0.8,
+                );
+              },
+              getDrawingVerticalLine: (value) {
+                return FlLine(
+                  color: Colors.grey[200]!,
+                  strokeWidth: 0.8,
+                );
+              },
+            ),
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 30,
+                  interval: 1,
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  interval: 0.2,
+                ),
+              ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: true,
+              border: Border.all(color: Colors.grey[300]!, width: 1),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

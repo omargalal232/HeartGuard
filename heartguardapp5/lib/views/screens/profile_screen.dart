@@ -128,48 +128,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.shade700,
+              Colors.blue.shade500,
+              Colors.blue.shade600,
+            ],
           ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildAppBar(),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
           : _error != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Error: $_error'),
+                                Text(
+                                  'Error: $_error',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.blue.shade700,
+                                  ),
                         child: const Text('Retry'),
                       ),
                     ],
                   ),
                 )
               : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(24),
                   child: Form(
                     key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.blue.shade900.withValues(alpha: 0.3 * 255),
+                                          blurRadius: 15,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 60,
+                                      backgroundColor: Colors.white,
+                                      child: Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.blue.shade900.withValues(alpha: 0.1 * 255),
+                                          blurRadius: 10,
+                                          spreadRadius: 0,
+                                        ),
+                                      ],
+                                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CircleAvatar(
-                          radius: 50,
-                          child: Icon(Icons.person, size: 50),
+                                        Text(
+                                          'Personal Information',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge
+                                              ?.copyWith(
+                                                color: Colors.blue.shade700,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                         ),
                         const SizedBox(height: 24),
                         TextFormField(
                           controller: _nameController,
-                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                             labelText: 'Name',
-                            border: OutlineInputBorder(),
+                                            hintText: 'Enter your name',
+                                            prefixIcon: const Icon(Icons.person_outline),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                              borderSide: BorderSide(
+                                                color: Colors.blue.withValues(alpha: 0.2 * 255),
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                              borderSide: BorderSide(
+                                                color: Colors.blue.withValues(alpha: 0.2 * 255),
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                              borderSide: BorderSide(
+                                                color: Colors.blue.shade600,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            filled: true,
+                                            fillColor: Colors.blue.shade50,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -178,25 +264,132 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Email: ${_profile?.email ?? 'Not available'}',
-                          style: Theme.of(context).textTheme.bodyLarge,
+                                        const SizedBox(height: 24),
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: Colors.blue.withValues(alpha: 0.2 * 255),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.email_outlined,
+                                                color: Colors.blue,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  _profile?.email ?? 'Not available',
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.blue,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                         ),
-                        const SizedBox(height: 24),
+                                        const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _updateProfile,
+                                            style: ElevatedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(vertical: 16),
+                                              backgroundColor: Colors.blue.shade600,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(16),
+                                              ),
+                                              elevation: 4,
+                                              shadowColor: Colors.blue.shade900.withValues(alpha: 0.3 * 255),
+                                            ),
                             child: _isLoading
-                                ? const CircularProgressIndicator()
-                                : const Text('Update Profile'),
+                                                ? const SizedBox(
+                                                    height: 20,
+                                                    width: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                                          Colors.white),
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Update Profile',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Text(
+                'Profile',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      color: Colors.blue.shade900.withValues(alpha: 0.3 * 255),
+                      offset: const Offset(1, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2 * 255),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Colors.white,
+              ),
+            ),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
     );
   }
 } 

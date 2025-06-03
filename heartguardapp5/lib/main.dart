@@ -5,6 +5,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:heartguardapp05/providers/theme_provider.dart';
 import 'package:heartguardapp05/navigation/app_router.dart';
 import 'package:heartguardapp05/constants/app_constants.dart';
+import 'package:heartguardapp05/constants/config.dart';
 import 'package:heartguardapp05/services/logger_service.dart';
 import 'firebase_options.dart';
 
@@ -32,7 +33,7 @@ Future<FirebaseApp> _initializeFirebase() async {
     // Initialize AppCheck after Firebase
     _logger.i("Initializing Firebase AppCheck...");
     await FirebaseAppCheck.instance.activate(
-      webProvider: ReCaptchaV3Provider('6LfXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
+      webProvider: ReCaptchaV3Provider(Config.recaptchaSiteKey),
       androidProvider: AndroidProvider.debug,
       appleProvider: AppleProvider.debug,
     );
@@ -99,6 +100,7 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.currentTheme,
             onGenerateRoute: AppRouter.generateRoute,
             initialRoute: AppConstants.loginRoute,
+            debugShowCheckedModeBanner: false,
           );
         },
       ),

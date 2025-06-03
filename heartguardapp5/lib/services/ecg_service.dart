@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:logger/logger.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart'; // Added for compute
 
 import '../models/ecg_reading.dart';
 import 'tflite_service.dart';
@@ -14,13 +15,11 @@ class OptimizedECGService {
   // Singleton pattern
   factory OptimizedECGService() => _instance;
   
-  OptimizedECGService._internal() {
-    _initialize();
-  }
+  OptimizedECGService._internal();
   
   final TFLiteService _tfliteService = TFLiteService();
   final EcgDataService _ecgDataService = EcgDataService();
-  final _logger = Logger();
+  static final _logger = Logger();
   
   // Stream controller for broadcasting analysis results
   final _analysisResultController = StreamController<Map<String, dynamic>>.broadcast();
@@ -41,7 +40,7 @@ class OptimizedECGService {
   bool _isModelInitialized = false;
   
   // Initialize the service
-  Future<void> _initialize() async {
+  Future<void> init() async {
     try {
       _logger.i('بدء تهيئة OptimizedECGService...');
       
@@ -54,6 +53,7 @@ class OptimizedECGService {
         _logger.i('تم تحميل نموذج TensorFlow Lite بنجاح ✅');
       } else {
         _logger.w('فشل في تحميل نموذج TensorFlow Lite ❌ - سيتم إعادة المحاولة عند طلب التحليل');
+        throw Exception('Failed to load TFLite model during OptimizedECGService initialization.');
       }
       
       // بدء الاستماع إلى القراءات
@@ -63,6 +63,7 @@ class OptimizedECGService {
     } catch (e, stackTrace) {
       _isModelInitialized = false;
       _logger.e('فشل في تهيئة OptimizedECGService', error: e, stackTrace: stackTrace);
+      rethrow;
     }
   }
   
@@ -177,75 +178,178 @@ class OptimizedECGService {
     };
   }
   
-  // ميزات استخراج من قراءة ECG
-  Future<Map<String, dynamic>> _extractFeatures(EcgReading reading) async {
-    try {
-      // حساب معدل ضربات القلب من القراءة
-      final heartRate = reading.bpm ?? 75.0;
-      
-      // تحليل بيانات تغير معدل ضربات القلب (HRV)
-      final List<double> hrvFeatures = _calculateHrvFeatures(reading.values!);
-      
-      // تحليل مجمع QRS
-      final Map<String, double> qrsFeatures = _analyzeQrsComplex(reading.values!);
-      
-      // تحليل مقطع ST
-      final Map<String, double> stFeatures = _analyzeStSegment(reading.values!);
-      
-      // إنشاء قاموس الميزات
-      return {
-        'heartRate': heartRate,
-        'hrv': {
-          'sdnn': hrvFeatures[0],
-          'rmssd': hrvFeatures[1],
-        },
-        'qrsDuration': qrsFeatures['duration']!,
-        'qrsAmplitude': qrsFeatures['amplitude']!,
-        'stElevation': stFeatures['elevation']!,
-        'stSlope': stFeatures['slope']!,
-      };
-    } catch (e, stackTrace) {
-      _logger.w('خطأ أثناء استخراج الميزات من ECG', error: e, stackTrace: stackTrace);
-      // إرجاع قيم افتراضية معقولة
-      return {
-        'heartRate': 75.0,
-        'hrv': {
-          'sdnn': 50.0,
-          'rmssd': 30.0,
-        },
+  // New static method for isolate work
+  static Future<Map<String, dynamic>> _extractFeaturesIsolateWork(List<double> values) async {
+    // Use debugPrint for logging within isolates as _logger might not be accessible
+    // or could lead to issues if not handled carefully (e.g., making it static).
+    debugPrint('[ISOLATE _extractFeaturesIsolateWork] Starting feature extraction.');
+
+    final Map<String, dynamic> defaultFeaturesForIsolate = {
+        'hrv': {'sdnn': 50.0, 'rmssd': 30.0},
         'qrsDuration': 100.0,
         'qrsAmplitude': 1.0,
-        'stElevation': 0.0,
-        'stSlope': 0.0,
+        'stElevation': 0.05,
+        'stSlope': 0.02,
+    };
+
+    try {
+      // Calculate HRV features with validation
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] Calculating HRV features...');
+      List<double> hrvFeatures = await _calculateHrvFeatures(values); // static call, make it await if it's async
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] HRV features calculated: SDNN=${hrvFeatures.isNotEmpty ? hrvFeatures[0] : 'N/A'}, RMSSD=${hrvFeatures.length > 1 ? hrvFeatures[1] : 'N/A'}');
+
+      if (hrvFeatures.length < 2 ||
+          hrvFeatures[0].isNaN || hrvFeatures[0].isInfinite || hrvFeatures[0] < 0 ||
+          (hrvFeatures.length > 1 && (hrvFeatures[1].isNaN || hrvFeatures[1].isInfinite || hrvFeatures[1] < 0))) {
+          // _logger.w('Isolate: Invalid or NaN HRV features detected: SDNN=${hrvFeatures.isNotEmpty ? hrvFeatures[0] : 'N/A'}, RMSSD=${hrvFeatures.length > 1 ? hrvFeatures[1] : 'N/A'}. Using default HRV values.');
+          debugPrint('[ISOLATE _extractFeaturesIsolateWork] Invalid or NaN HRV features detected. SDNN=${hrvFeatures.isNotEmpty ? hrvFeatures[0] : 'N/A'}, RMSSD=${hrvFeatures.length > 1 ? hrvFeatures[1] : 'N/A'}. Using default HRV values.');
+          final defaultHrv = defaultFeaturesForIsolate['hrv'] as Map<String, double>;
+          // Ensure hrvFeatures has at least two elements before assigning
+          hrvFeatures = [defaultHrv['sdnn']!, defaultHrv['rmssd']!];
+      }
+
+
+      // Analyze QRS complex
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] Analyzing QRS complex...');
+      Map<String, double> qrsFeatures = await _analyzeQrsComplex(values); // static call, make it await if it's async
+      // Original debugPrint logged potentially null values from qrsFeatures directly.
+      // Assuming _analyzeQrsComplex might not always return valid keys, or for general safety:
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] QRS complex analyzed: Duration=${qrsFeatures['duration']?.toString() ?? "N/A"}, Amplitude=${qrsFeatures['amplitude']?.toString() ?? "N/A"}');
+
+      final double? qrsDuration = qrsFeatures['duration'];
+      final double? qrsAmplitude = qrsFeatures['amplitude'];
+      bool setDefaultQrs = false;
+
+      if (qrsDuration == null || qrsAmplitude == null) {
+          setDefaultQrs = true;
+          debugPrint('[ISOLATE _extractFeaturesIsolateWork] QRS duration or amplitude is null. Using default QRS values.');
+      } else {
+          // qrsDuration and qrsAmplitude are now non-nullable `double` here due to type promotion
+          if (qrsDuration < 0 || qrsAmplitude < 0 ||
+              qrsDuration.isNaN || qrsDuration.isInfinite ||
+              qrsAmplitude.isNaN || qrsAmplitude.isInfinite) {
+              setDefaultQrs = true;
+              debugPrint('[ISOLATE _extractFeaturesIsolateWork] Invalid QRS values (negative, NaN, or infinite). Using default QRS values.');
+          }
+      }
+
+      if (setDefaultQrs) {
+          // _logger.w('Isolate: Invalid QRS features detected. Using default QRS values.');
+          qrsFeatures = {
+              'duration': defaultFeaturesForIsolate['qrsDuration'] as double,
+              'amplitude': defaultFeaturesForIsolate['qrsAmplitude'] as double,
+          };
+      }
+
+      // Analyze ST segment
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] Analyzing ST segment...');
+      Map<String, double> stFeatures = await _analyzeStSegment(values); // static call, make it await if it's async
+      // Similar safety for debugPrint:
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] ST segment analyzed: Elevation=${stFeatures['elevation']?.toString() ?? "N/A"}, Slope=${stFeatures['slope']?.toString() ?? "N/A"}');
+
+      final double? stElevation = stFeatures['elevation'];
+      final double? stSlope = stFeatures['slope'];
+      bool setDefaultSt = false;
+
+      if (stElevation == null || stSlope == null) {
+          setDefaultSt = true;
+          debugPrint('[ISOLATE _extractFeaturesIsolateWork] ST elevation or slope is null. Using default ST values.');
+      } else {
+          // stElevation and stSlope are now non-nullable `double`
+          if (stElevation.isNaN || stElevation.isInfinite ||
+              stSlope.isNaN || stSlope.isInfinite) {
+              setDefaultSt = true;
+              debugPrint('[ISOLATE _extractFeaturesIsolateWork] Invalid ST values (NaN or infinite). Using default ST values.');
+          }
+      }
+
+      if (setDefaultSt) {
+        // _logger.w('Isolate: Invalid ST segment features. Using default ST values.');
+        stFeatures = {
+            'elevation': defaultFeaturesForIsolate['stElevation'] as double,
+            'slope': defaultFeaturesForIsolate['stSlope'] as double,
+        };
+      } else {
+        // This block executes if stFeatures were not replaced by defaults,
+        // meaning stElevation and stSlope are valid (non-null, not NaN/Infinite).
+        // Type promotion ensures stElevation and stSlope are non-nullable here.
+        if (stElevation!.abs() > 0.5 || stSlope!.abs() > 0.5) { // Use ! as they are now confirmed non-null after the 'else' path
+        // _logger.w('Isolate: Abnormal ST segment features detected: Elevation=${stFeatures['elevation']}, Slope=${stFeatures['slope']}');
+          debugPrint('[ISOLATE _extractFeaturesIsolateWork] Abnormal ST segment features detected: Elevation=$stElevation, Slope=$stSlope');
+        }
+      }
+      
+      final result = {
+          'hrv': {'sdnn': hrvFeatures[0], 'rmssd': hrvFeatures.length > 1 ? hrvFeatures[1] : (defaultFeaturesForIsolate['hrv'] as Map<String,double>)['rmssd']!},
+          'qrsDuration': qrsFeatures['duration']!,
+          'qrsAmplitude': qrsFeatures['amplitude']!,
+          'stElevation': stFeatures['elevation']!,
+          'stSlope': stFeatures['slope']!,
       };
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] Feature extraction complete. Result: $result');
+      return result;
+    } catch (e, stackTrace) {
+      // _logger.e('Error in _extractFeaturesIsolateWork', error: e, stackTrace: stackTrace);
+      debugPrint('[ISOLATE _extractFeaturesIsolateWork] Error in _extractFeaturesIsolateWork: $e\\n$stackTrace');
+      return defaultFeaturesForIsolate; // Return full default structure on error
     }
   }
-  
-  // حساب ميزات تغير معدل ضربات القلب
-  List<double> _calculateHrvFeatures(List<double> values) {
-    // في تطبيق حقيقي، يتم هنا حساب HRV من فواصل RR
-    // هنا نستخدم قيم تقريبية لأغراض المثال
-    const sdnn = 50.0; // انحراف معياري لفواصل RR
-    const rmssd = 30.0; // جذر متوسط مربع فروق فواصل RR المتعاقبة
-    return [sdnn, rmssd];
+
+  // Placeholder static methods for feature extraction logic
+  static Future<List<double>> _calculateHrvFeatures(List<double> values) async {
+    // Implement HRV calculation logic here
+    debugPrint('[ISOLATE _calculateHrvFeatures] Placeholder for HRV calculation.');
+    // Return default or calculated values
+    return [50.0, 30.0]; // Example: SDNN, RMSSD
   }
-  
-  // تحليل مجمع QRS
-  Map<String, double> _analyzeQrsComplex(List<double> values) {
-    // في تطبيق حقيقي، يكون هذا أكثر تعقيدًا
-    return {
-      'duration': 100.0, // مدة QRS بالمللي ثانية
-      'amplitude': 1.0, // سعة QRS بالميلي فولت
-    };
+
+  static Future<Map<String, double>> _analyzeQrsComplex(List<double> values) async {
+    // Implement QRS complex analysis logic here
+    debugPrint('[ISOLATE _analyzeQrsComplex] Placeholder for QRS complex analysis.');
+    // Return default or calculated values
+    return {'duration': 100.0, 'amplitude': 1.0};
   }
-  
-  // تحليل مقطع ST
-  Map<String, double> _analyzeStSegment(List<double> values) {
-    // في تطبيق حقيقي، يتم تحليل ارتفاع مقطع ST وميله
-    return {
-      'elevation': 0.05, // ارتفاع مقطع ST بالميلي فولت
-      'slope': 0.02, // ميل مقطع ST
-    };
+
+  static Future<Map<String, double>> _analyzeStSegment(List<double> values) async {
+    // Implement ST segment analysis logic here
+    debugPrint('[ISOLATE _analyzeStSegment] Placeholder for ST segment analysis.');
+    // Return default or calculated values
+    return {'elevation': 0.05, 'slope': 0.02};
+  }
+
+  // ميزات استخراج من قراءة ECG - Modified to use compute
+  Future<Map<String, dynamic>> _extractFeatures(EcgReading reading) async {
+    _logger.d('Attempting to extract features for reading ID: ${reading.id}');
+    if (reading.values == null || reading.values!.isEmpty) {
+      _logger.w('No ECG values found in reading ID: ${reading.id}. Returning default features.');
+      // Provide a default structure matching what the isolate would return on success
+      return {
+        'hrv': {'sdnn': 50.0, 'rmssd': 30.0}, // Default HRV
+        'qrsDuration': 100.0,               // Default QRS duration
+        'qrsAmplitude': 1.0,                // Default QRS amplitude
+        'stElevation': 0.05,                // Default ST elevation
+        'stSlope': 0.02,                    // Default ST slope
+      };
+    }
+
+    try {
+      _logger.d('Calling compute for _extractFeaturesIsolateWork with ${reading.values!.length} values.');
+      // Run feature extraction in a separate isolate
+      final features = await compute(_extractFeaturesIsolateWork, reading.values!);
+      _logger.d('Feature extraction via compute completed. Features: $features');
+      return features;
+    } catch (e, stackTrace) {
+      _logger.e('Error calling compute for feature extraction in _extractFeatures', error: e, stackTrace: stackTrace);
+      // Return default features in case of compute error
+      return {
+        'hrv': {'sdnn': 50.0, 'rmssd': 30.0},
+        'qrsDuration': 100.0,
+        'qrsAmplitude': 1.0,
+        'stElevation': 0.05,
+        'stSlope': 0.02,
+         'error_in_compute': e.toString(), // Optionally include error information
+      };
+    }
   }
   
   String _getAnalysisCacheKey(EcgReading reading) {
@@ -326,8 +430,9 @@ class ECGService {
 
   // Add initialization method for compatibility with MonitoringScreen
   Future<void> init() async {
-    // The initialization is handled in the OptimizedECGService constructor
-    // This is just a stub for backward compatibility
+    // The initialization is now handled by awaiting the OptimizedECGService.init()
+    await _optimizedService.init(); 
+    _logger.i('ECGService initialized by calling OptimizedECGService.init()');
   }
   
   // إعادة تحميل النموذج
@@ -395,7 +500,7 @@ class ECGService {
         
         // Try querying by user_email field in ecg_readings node
         try {
-          final reference = _database.ref('ecg_readings');
+          final reference = _database.ref('ecg_data');
           final query = reference
               .orderByChild('user_email')
               .equalTo(userEmail)
@@ -404,11 +509,11 @@ class ECGService {
           final snapshot = await query.get();
           
           if (snapshot.exists && snapshot.value != null) {
-            _logger.i('Found readings in ecg_readings node');
+            _logger.i('Found readings in ecg_data node');
             readings = _processSnapshot(snapshot);
           }
         } catch (e) {
-          _logger.w('Error querying ecg_readings node: $e');
+          _logger.w('Error querying ecg_data node: $e');
         }
       }
       
@@ -485,7 +590,7 @@ class ECGService {
   Future<Map<String, dynamic>?> getCurrentReading() async {
     try {
       // Get the latest reading from Realtime Database
-      final snapshot = await _database.ref('ecg_readings').orderByChild('timestamp').limitToLast(1).get();
+      final snapshot = await _database.ref('ecg_data').orderByChild('timestamp').limitToLast(1).get();
 
       if (snapshot.value == null) {
         _logger.i('No current ECG reading available');

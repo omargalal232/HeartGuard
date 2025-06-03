@@ -9,8 +9,7 @@ import 'package:logger/logger.dart' as logger;
 import '../models/ecg_data_model.dart';
 import 'tflite_service.dart';
 
-/// A high-performance service for handling ECG data
-/// with optimized fetching, caching, and AI analysis
+/// High-performance service for ECG data fetching, caching, and analysis.
 class ECGPerformanceService {
   static final ECGPerformanceService _instance = ECGPerformanceService._internal();
   

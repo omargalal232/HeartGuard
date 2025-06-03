@@ -35,9 +35,24 @@
       }
     },
     "ecg_data": {
-      ".indexOn": ["timestamp"],
+      ".indexOn": ["timestamp", "user_id"],
       ".read": "auth != null",
-      ".write": "true"
+      "$dataId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['timestamp', 'value', 'user_id', 'device_id'])",
+        "timestamp": {
+          ".validate": "newData.isNumber()"
+        },
+        "value": {
+          ".validate": "newData.isNumber()"
+        },
+        "user_id": {
+          ".validate": "newData.isString()"
+        },
+        "device_id": {
+          ".validate": "newData.isString()"
+        }
+      }
     },
     "ecg_readings": {
       ".indexOn": ["user_email", "timestamp"],
@@ -48,6 +63,29 @@
       "$uid": {
         ".read": "$uid === auth.uid || root.child('users').child($uid).child('authorized_viewers').child(auth.uid).exists()",
         ".write": "$uid === auth.uid"
+      }
+    },
+    "processed_heart_sounds": {
+      ".indexOn": ["timestamp"],
+      ".read": "auth != null",
+      "$recordingId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['sound_data', 'timestamp', 'duration'])",
+        "sound_data": {
+          ".validate": "newData.isArray()"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber()"
+        },
+        "duration": {
+          ".validate": "newData.isNumber()"
+        },
+        "heart_rate": {
+          ".validate": "!newData.exists() || newData.isNumber()"
+        },
+        "metadata": {
+          ".validate": "!newData.exists() || newData.isObject()"
+        }
       }
     }
   }

@@ -1,3 +1,5 @@
+import 'config.dart';
+
 class AppConstants {
   // Route definitions
   static const String loginRoute = '/login';
@@ -43,8 +45,8 @@ class AppConstants {
   // App configuration
   static const String appTitle = 'HeartGuard';
   static const String logoPath = 'assets/img/logo.png';
-  static const String baseUrl = 'https://heart-guard-1c49e-default-rtdb.firebaseio.com';
-  static const String firebaseServerKey = 'YOUR_FIREBASE_SERVER_KEY'; // Replace with actual key
+  static String get baseUrl => Config.baseUrl;
+  static String get firebaseServerKey => Config.firebaseServerKey;
 
   // Settings keys
   static const String notificationsEnabledKey = 'notifications_enabled';

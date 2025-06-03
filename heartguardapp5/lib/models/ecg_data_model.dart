@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Model for a batch of ECG data, including raw waveform, features, and analysis results.
 class ECGDataModel {
   final String id;
   final DateTime timestamp;
@@ -16,6 +17,9 @@ class ECGDataModel {
     this.analysis,
     required this.hasAnomaly,
   });
+
+  /// Returns the timestamp as milliseconds since epoch.
+  int get timestampMs => timestamp.millisecondsSinceEpoch;
 
   factory ECGDataModel.fromJson(Map<String, dynamic> json, {String? id}) {
     return ECGDataModel(

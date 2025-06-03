@@ -17,7 +17,9 @@ class ECGAnalysisResult {
   });
 }
 
+/// Service for ECG signal analysis, feature extraction, and AI integration.
 class ECGAnalysisService {
+  static const int defaultSamplingRate = 250; // Hz
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _logger = logger.Logger();
@@ -73,7 +75,8 @@ class ECGAnalysisService {
     }
   }
 
-  // Detect R-peaks in ECG signal
+  /// Detect R-peaks in the ECG signal using a simple local maxima algorithm.
+  /// Returns a list of indices of detected R-peaks.
   List<int> _detectRPeaks(List<double> ecgSignal) {
     try {
       if (ecgSignal.isEmpty) return [];
@@ -167,16 +170,11 @@ class ECGAnalysisService {
     return rrIntervals;
   }
   
-  // Calculate heart rate from RR intervals
-  double _calculateHeartRate(List<double> rrIntervals) {
-    // If no RR intervals, return a default value
+  /// Calculate heart rate from RR intervals (in samples) and sampling rate.
+  double _calculateHeartRate(List<double> rrIntervals, {int samplingRate = defaultSamplingRate}) {
     if (rrIntervals.isEmpty) return 70.0;
-    
-    // Calculate average RR interval in samples
     double avgRR = rrIntervals.reduce((a, b) => a + b) / rrIntervals.length;
-    
-    // Convert to BPM (assuming 250 Hz sampling rate)
-    return (60 * 250) / avgRR;
+    return (60 * samplingRate) / avgRR;
   }
   
   // Calculate heart rate variability metrics

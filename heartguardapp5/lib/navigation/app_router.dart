@@ -31,7 +31,7 @@ class AppRouter {
       case AppConstants.profileRoute:
         return MaterialPageRoute(builder: (_) => const ProfileScreen());
       
-      case monitoring:
+      case AppConstants.monitoringRoute:
         return MaterialPageRoute(builder: (_) => const MonitoringScreen());
       
       case AppConstants.settingsRoute:

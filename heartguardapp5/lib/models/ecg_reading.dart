@@ -2,6 +2,7 @@
 
 import 'package:logger/logger.dart';
 
+/// Model for a single ECG reading, including waveform, BPM, and optional heart sound value.
 class EcgReading {
   final String? id; // Firebase push ID
   final double? bpm;
@@ -11,6 +12,7 @@ class EcgReading {
   final Object? timestamp;
   final String? userEmail; // 'user_email' in Firebase
   final List<double>? values; // ECG values sequence if available
+  final int? heartSoundValue; // New field for heart sound data from MAX9814
 
   static final Logger _logger = Logger();
 
@@ -23,6 +25,7 @@ class EcgReading {
     this.timestamp,
     this.userEmail,
     this.values,
+    this.heartSoundValue,
   });
 
   factory EcgReading.fromMap(Map<String, dynamic> map) {
@@ -39,6 +42,7 @@ class EcgReading {
       normalizedMap['timestamp'] ??= map['time'] ?? map['date'] ?? map['created_at'] ?? map['createdAt'];
       normalizedMap['user_email'] ??= map['userEmail'] ?? map['email'] ?? map['user'];
       normalizedMap['values'] ??= map['data'] ?? map['ecgValues'] ?? map['readings'];
+      normalizedMap['heart_sound_raw'] ??= map['heartSound'] ?? map['heart_sound_value'] ?? map['heart_sound'];
       
       // Handle raw_value and convert to values list if values is not provided
       List<double>? valuesList;
@@ -95,9 +99,25 @@ class EcgReading {
         }
       }
 
+      // Parse heart sound value
+      int? heartSoundVal;
+      final heartSoundRaw = normalizedMap['heart_sound_raw'];
+      if (heartSoundRaw != null) {
+        if (heartSoundRaw is int) {
+          heartSoundVal = heartSoundRaw;
+        } else if (heartSoundRaw is double) {
+          heartSoundVal = heartSoundRaw.round();
+        } else if (heartSoundRaw is String) {
+          heartSoundVal = int.tryParse(heartSoundRaw);
+        }
+      }
+
       // Parse timestamp into a usable format
       Object? processedTimestamp = normalizedMap['timestamp'];
-      if (processedTimestamp is String) {
+      if (processedTimestamp == '.sv') {
+        // If server value, use current time
+        processedTimestamp = DateTime.now().millisecondsSinceEpoch;
+      } else if (processedTimestamp is String) {
         // Try to convert string timestamp to int (milliseconds)
         final parsedInt = int.tryParse(processedTimestamp);
         if (parsedInt != null) {
@@ -114,6 +134,7 @@ class EcgReading {
         timestamp: processedTimestamp,
         userEmail: _safeCast<String?>(normalizedMap['user_email']),
         values: valuesList,
+        heartSoundValue: heartSoundVal,
       );
     } catch (e) {
       _logger.w('Error creating EcgReading from map: $e');
@@ -187,8 +208,11 @@ class EcgReading {
     return null;
   }
 
+  // Check if the reading has valid data
   bool get hasValidData {
-    return values != null && values!.isNotEmpty || rawValue != null;
+    return (values != null && values!.isNotEmpty) || 
+           rawValue != null || 
+           bpm != null;
   }
 
   DateTime? get dateTime {
@@ -212,8 +236,21 @@ class EcgReading {
     return null;
   }
 
+  /// Returns the timestamp as milliseconds since epoch, or null if not available.
+  int? get timestampMs {
+    if (timestamp is int) return timestamp as int;
+    if (timestamp is String) {
+      final millis = int.tryParse(timestamp as String);
+      if (millis != null) return millis;
+      final dt = DateTime.tryParse(timestamp as String);
+      if (dt != null) return dt.millisecondsSinceEpoch;
+    }
+    if (timestamp is DateTime) return (timestamp as DateTime).millisecondsSinceEpoch;
+    return null;
+  }
+
   @override
   String toString() {
-    return 'EcgReading(id: $id, bpm: $bpm, rawValue: $rawValue, average: $average, maxInPeriod: $maxInPeriod, timestamp: $timestamp, userEmail: $userEmail, values: ${values?.length ?? 0} points)';
+    return 'EcgReading(id: $id, bpm: $bpm, rawValue: $rawValue, values: $values, timestamp: $timestamp)';
   }
 } 
